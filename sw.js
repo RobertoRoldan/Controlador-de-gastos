@@ -1,4 +1,4 @@
-const CACHE_NAME = 'finanzas-roldan-v14';
+const CACHE_NAME = 'finanzas-roldan-v15-multiusuario';
 const ASSETS_TO_CACHE = [
   './',
   'index.html',

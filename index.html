@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Controlador de Gastos Maestro V12.9 - Supabase Cloud</title>
+    <title>Controlador de Gastos Maestro V13.0 - Multiusuario & Realtime Supabase</title>
     
     <!-- PWA & Mobile Web App Meta Tags -->
     <link rel="manifest" href="manifest.json">
@@ -804,11 +804,125 @@
             font-family: var(--font-mono);
             font-size: 0.72rem;
             color: #38bdf8;
-            max-height: 180px;
+            max-height: 220px;
             overflow-y: auto;
             text-align: left;
             margin: 12px 0;
             white-space: pre-wrap;
+        }
+
+        /* Badges de Categorías Compartidas y Roles */
+        .cat-badge-shared {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background: rgba(6, 182, 212, 0.18);
+            border: 1px solid rgba(6, 182, 212, 0.4);
+            color: var(--cyan);
+            font-size: 0.62rem;
+            font-weight: 800;
+            padding: 2px 7px;
+            border-radius: 6px;
+            letter-spacing: 0.3px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .cat-badge-shared.incoming {
+            background: rgba(168, 85, 247, 0.18);
+            border-color: rgba(168, 85, 247, 0.4);
+            color: var(--purple);
+        }
+        .cat-badge-role {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(245, 158, 11, 0.18);
+            border: 1px solid rgba(245, 158, 11, 0.4);
+            color: var(--orange);
+            font-size: 0.58rem;
+            font-weight: 800;
+            padding: 2px 6px;
+            border-radius: 6px;
+        }
+        .badge-role-owner {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            color: var(--green);
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-weight: 800;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+        }
+        .badge-role-editor {
+            background: rgba(6, 182, 212, 0.15);
+            border: 1px solid rgba(6, 182, 212, 0.4);
+            color: var(--cyan);
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-weight: 800;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+        }
+        .badge-role-viewer {
+            background: rgba(245, 158, 11, 0.15);
+            border: 1px solid rgba(245, 158, 11, 0.4);
+            color: var(--orange);
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-weight: 800;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+        }
+        .member-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            padding: 10px 14px;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            gap: 10px;
+        }
+        .member-info {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 0.82rem;
+        }
+        .realtime-toast {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid var(--cyan);
+            box-shadow: 0 8px 30px var(--cyan-glow);
+            color: #ffffff;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            backdrop-filter: blur(10px);
+            max-width: 90%;
+            text-align: center;
+        }
+        .realtime-toast.visible {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
         }
     </style>
 </head>
@@ -854,7 +968,7 @@
         <div class="user-topbar-left">
             <span>👤</span>
             <span class="user-email-text" id="topUserEmail">usuario@correo.com</span>
-            <span class="sync-badge" id="syncStatusBadge">☁️ Sincronizado</span>
+            <span class="sync-badge" id="syncStatusBadge">⚡ En tiempo real</span>
         </div>
         <button class="btn-signout-mini" onclick="signOutUser()" title="Cerrar Sesión">
             Cerrar Sesión
@@ -863,9 +977,9 @@
 
     <!-- BANNER DE AVISO SI FALTA LA TABLA EN SUPABASE -->
     <div class="table-warning-banner" id="tableWarningBanner">
-        <span>⚠️ <strong>Falta crear la tabla en Supabase:</strong> La tabla <code>user_finanzas</code> no existe todavía en tu proyecto.</span>
+        <span>⚠️ <strong>Falta configurar las tablas en Supabase:</strong> Las tablas <code>categories</code> y <code>category_members</code> no existen todavía en tu proyecto.</span>
         <button class="btn-outline" style="width:auto; padding:6px 12px; font-size:0.75rem; border-color:var(--orange); color:var(--orange);" onclick="showSqlModal()">
-            Ver Script SQL
+            Ver Script SQL Multiusuario
         </button>
     </div>
 
@@ -1091,15 +1205,29 @@
      ========================================================= -->
 <div id="detailView">
     <div class="container" style="padding-bottom: 40px;">
-        <button class="btn-outline" style="width:auto; margin-bottom:15px; padding:8px 16px; display:inline-flex; align-items:center; gap:6px;" onclick="closeDetail()">
-            ← VOLVER
-        </button>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; flex-wrap:wrap; gap:10px;">
+            <button class="btn-outline" style="width:auto; padding:8px 16px; display:inline-flex; align-items:center; gap:6px;" onclick="closeDetail()">
+                ← VOLVER
+            </button>
+            <button class="btn-outline" id="detShareBtn" style="width:auto; padding:8px 16px; display:inline-flex; align-items:center; gap:6px; border-color:var(--cyan); color:var(--cyan);" onclick="openShareModal()">
+                👥 COMPARTIR CARPETA
+            </button>
+        </div>
         <div class="glass-card">
-            <h1 id="detTitle" style="text-transform:uppercase; color:var(--cyan); margin:0; font-size:1.6rem; font-weight:900;"></h1>
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:8px;">
+                <h1 id="detTitle" style="text-transform:uppercase; color:var(--cyan); margin:0; font-size:1.6rem; font-weight:900;"></h1>
+                <div id="detShareInfo" style="font-size:0.75rem; color:var(--text-muted); display:flex; align-items:center; gap:6px;"></div>
+            </div>
             <div id="detTotal" class="total-label" style="text-align:left; font-size:2.4rem; margin-top:4px;">0.00€</div>
         </div>
+
+        <!-- Aviso si es solo lectura -->
+        <div id="readOnlyNotice" class="glass-card" style="display:none; border-color:rgba(245,158,11,0.3); background:rgba(245,158,11,0.06); text-align:center; padding:14px;">
+            <span style="color:var(--orange); font-size:0.85rem; font-weight:700;">👁️ Estás viendo esta carpeta compartida en modo sólo lectura.</span>
+        </div>
+
         <div id="tagSummary" class="tag-pill-container"></div>
-        <div class="glass-card" style="position:relative;">
+        <div class="glass-card" id="itemAddCard" style="position:relative;">
             <input type="hidden" id="editIdx" value="-1">
             <input type="text" id="itemDesc" placeholder="Concepto">
             <input type="number" step="0.01" id="itemAmt" placeholder="Importe €">
@@ -1166,39 +1294,179 @@
     </div>
 </div>
 
-<!-- MODAL: SCRIPT SQL SUPABASE (POR SI NO EXISTE LA TABLA) -->
-<div id="sqlModal" class="modal">
-    <div class="modal-content" style="max-width:500px;">
-        <h3 style="color:var(--orange); margin-bottom:10px;">Crear Tabla en Supabase</h3>
-        <p style="font-size:0.8rem; color:var(--text-muted); line-height:1.4;">
-            Copia este código y pégalo en el <strong>Editor SQL</strong> de tu panel de Supabase para activar la tabla <code>user_finanzas</code>:
+<!-- MODAL: COMPARTIR CATEGORÍA / CARPETA -->
+<div id="shareModal" class="modal">
+    <div class="modal-content" style="max-width:480px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h3 style="color:var(--cyan); margin:0;">👥 Compartir Carpeta</h3>
+            <button class="btn-icon" onclick="hideModals()" style="font-size:1.1rem; color:var(--text-muted);">✕</button>
+        </div>
+        <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:14px; line-height:1.4;">
+            Comparte la categoría <strong id="shareCatTitle" style="color:#fff;"></strong> con otros usuarios registrados. Los cambios y gastos se sincronizarán en tiempo real.
         </p>
-        <div class="code-box" id="sqlCodeBox">create table public.user_finanzas (
-  user_id uuid primary key references auth.users(id) on delete cascade,
-  data jsonb not null default '{}'::jsonb,
-  config jsonb not null default '{}'::jsonb,
-  updated_at timestamptz default now()
+
+        <!-- Dueño y Miembros actuales -->
+        <div style="font-size:0.72rem; color:var(--text-muted); font-weight:800; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:8px;">
+            USUARIOS CON ACCESO
+        </div>
+        <div id="shareMembersList" style="max-height:160px; overflow-y:auto; margin-bottom:14px;"></div>
+
+        <!-- Formulario para invitar (solo si es owner) -->
+        <div id="shareInviteSection" style="border-top:1px solid var(--border); padding-top:14px;">
+            <div style="font-size:0.72rem; color:var(--text-muted); font-weight:800; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:8px;">
+                INVITAR A OTRO USUARIO
+            </div>
+            <div id="shareMsg" class="auth-msg" style="display:none; margin-bottom:10px;"></div>
+            <input type="email" id="shareUserEmail" placeholder="correo@ejemplo.com del usuario registrado" autocomplete="email">
+            <select id="shareUserRole">
+                <option value="editor" selected>✏️ Editor (puede añadir y editar gastos)</option>
+                <option value="viewer">👁️ Lector (sólo ver gastos, sin modificar)</option>
+            </select>
+            <button class="btn-primary" style="background:var(--cyan); color:#030508; box-shadow:0 4px 16px var(--cyan-glow);" onclick="submitShareInvitation()">
+                INVITAR Y COMPARTIR
+            </button>
+        </div>
+
+        <!-- Si el usuario es invitado, botón para salir de la carpeta -->
+        <div id="shareLeaveSection" style="display:none; border-top:1px solid var(--border); padding-top:14px; text-align:center;">
+            <button class="btn-outline" style="border-color:var(--red); color:var(--red);" onclick="leaveCurrentCategory()">
+                🚪 Abandonar esta carpeta compartida
+            </button>
+        </div>
+
+        <button class="btn-outline" onclick="hideModals()" style="margin-top:14px;">CERRAR</button>
+    </div>
+</div>
+
+<!-- MODAL: SCRIPT SQL SUPABASE MULTIUSUARIO -->
+<div id="sqlModal" class="modal">
+    <div class="modal-content" style="max-width:540px;">
+        <h3 style="color:var(--orange); margin-bottom:10px;">Configurar Tablas en Supabase</h3>
+        <p style="font-size:0.8rem; color:var(--text-muted); line-height:1.4;">
+            Copia este código y pégalo en el <strong>Editor SQL</strong> de tu panel de Supabase para activar las tablas multiusuario (<code>categories</code>, <code>category_members</code>, <code>expenses</code>, <code>user_config</code>), permisos RLS y tiempo real:
+        </p>
+        <div class="code-box" id="sqlCodeBox">-- 1. TABLA: categories
+create table if not exists public.categories (
+    id uuid primary key default gen_random_uuid(),
+    owner_id uuid not null references auth.users(id) on delete cascade,
+    owner_email text not null default '',
+    name text not null,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+    constraint categories_owner_name_key unique (owner_id, name)
 );
 
-alter table public.user_finanzas enable row level security;
+-- 2. TABLA INTERMEDIA: category_members (Permisos / Relación multiusuario)
+create table if not exists public.category_members (
+    id uuid primary key default gen_random_uuid(),
+    category_id uuid not null references public.categories(id) on delete cascade,
+    user_id uuid references auth.users(id) on delete cascade,
+    user_email text not null,
+    role text not null default 'editor' check (role in ('owner', 'editor', 'viewer')),
+    created_at timestamptz not null default now(),
+    constraint category_members_cat_email_key unique (category_id, user_email)
+);
 
-create policy "Usuarios leen sus datos"
-  on public.user_finanzas for select
-  using (auth.uid() = user_id);
+-- 3. TABLA: expenses (Movimientos de cada categoría)
+create table if not exists public.expenses (
+    id uuid primary key default gen_random_uuid(),
+    category_id uuid not null references public.categories(id) on delete cascade,
+    "desc" text not null,
+    amount numeric not null,
+    date text not null,
+    tags text not null default '',
+    created_by uuid references auth.users(id) on delete set null,
+    created_by_email text not null default '',
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now()
+);
 
-create policy "Usuarios insertan sus datos"
-  on public.user_finanzas for insert
-  with check (auth.uid() = user_id);
+-- 4. TABLA: user_config (Preferencias personales)
+create table if not exists public.user_config (
+    user_id uuid primary key references auth.users(id) on delete cascade,
+    config jsonb not null default '{}'::jsonb,
+    updated_at timestamptz not null default now()
+);
 
-create policy "Usuarios actualizan sus datos"
-  on public.user_finanzas for update
-  using (auth.uid() = user_id);</div>
+-- Índices
+create index if not exists idx_categories_owner on public.categories(owner_id);
+create index if not exists idx_category_members_cat on public.category_members(category_id);
+create index if not exists idx_category_members_email on public.category_members(lower(user_email));
+create index if not exists idx_category_members_uid on public.category_members(user_id);
+create index if not exists idx_expenses_category on public.expenses(category_id);
+create index if not exists idx_expenses_date on public.expenses(date);
+
+-- Trigger auto user_id
+create or replace function public.link_category_member_user_id()
+returns trigger language plpgsql security definer as $$
+begin
+    if new.user_id is null and new.user_email is not null then
+        select id into new.user_id from auth.users where lower(email) = lower(trim(new.user_email)) limit 1;
+    end if;
+    return new;
+end;
+$$;
+drop trigger if exists trg_link_category_member on public.category_members;
+create trigger trg_link_category_member before insert or update on public.category_members for each row execute function public.link_category_member_user_id();
+
+-- Funciones de Seguridad RLS
+create or replace function public.is_category_owner(p_cat_id uuid) returns boolean language sql security definer set search_path = public stable as $$
+    select exists (select 1 from public.categories where id = p_cat_id and owner_id = auth.uid());
+$$;
+
+create or replace function public.is_category_member(p_cat_id uuid) returns boolean language sql security definer set search_path = public stable as $$
+    select exists (select 1 from public.category_members where category_id = p_cat_id and (user_id = auth.uid() or lower(user_email) = lower(coalesce(auth.jwt() ->> 'email', ''))));
+$$;
+
+create or replace function public.can_edit_category(p_cat_id uuid) returns boolean language sql security definer set search_path = public stable as $$
+    select exists (select 1 from public.categories where id = p_cat_id and owner_id = auth.uid()) 
+        or exists (select 1 from public.category_members where category_id = p_cat_id and (user_id = auth.uid() or lower(user_email) = lower(coalesce(auth.jwt() ->> 'email', ''))) and role in ('owner', 'editor'));
+$$;
+
+-- RLS
+alter table public.categories enable row level security;
+alter table public.category_members enable row level security;
+alter table public.expenses enable row level security;
+alter table public.user_config enable row level security;
+
+create policy "categories_select_policy" on public.categories for select using (owner_id = auth.uid() or public.is_category_member(id));
+create policy "categories_insert_policy" on public.categories for insert with check (owner_id = auth.uid());
+create policy "categories_update_policy" on public.categories for update using (owner_id = auth.uid());
+create policy "categories_delete_policy" on public.categories for delete using (owner_id = auth.uid());
+
+create policy "members_select_policy" on public.category_members for select using (public.is_category_owner(category_id) or user_id = auth.uid() or lower(user_email) = lower(coalesce(auth.jwt() ->> 'email', '')));
+create policy "members_insert_policy" on public.category_members for insert with check (public.is_category_owner(category_id));
+create policy "members_update_policy" on public.category_members for update using (public.is_category_owner(category_id));
+create policy "members_delete_policy" on public.category_members for delete using (public.is_category_owner(category_id) or user_id = auth.uid() or lower(user_email) = lower(coalesce(auth.jwt() ->> 'email', '')));
+
+create policy "expenses_select_policy" on public.expenses for select using (public.is_category_owner(category_id) or public.is_category_member(category_id));
+create policy "expenses_insert_policy" on public.expenses for insert with check (public.can_edit_category(category_id));
+create policy "expenses_update_policy" on public.expenses for update using (public.can_edit_category(category_id));
+create policy "expenses_delete_policy" on public.expenses for delete using (public.can_edit_category(category_id));
+
+create policy "user_config_all_policy" on public.user_config for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+-- Realtime
+do $$ begin
+    if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'categories') then
+        alter publication supabase_realtime add table public.categories;
+    end if;
+    if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'category_members') then
+        alter publication supabase_realtime add table public.category_members;
+    end if;
+    if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'expenses') then
+        alter publication supabase_realtime add table public.expenses;
+    end if;
+end $$;</div>
         <button class="btn-primary" onclick="copySqlCode()" style="background:var(--orange); color:#000; margin-bottom:8px;">
-            COPIAR SCRIPT SQL
+            COPIAR SCRIPT SQL COMPLETO
         </button>
         <button class="btn-outline" onclick="hideModals()">CERRAR</button>
     </div>
 </div>
+
+<!-- TOAST FLOTANTE DE TIEMPO REAL -->
+<div id="realtimeToast" class="realtime-toast"></div>
 
 <!-- =========================================================
      LÓGICA JAVASCRIPT: SUPABASE AUTH & CLOUD DATABASE
@@ -1212,8 +1480,14 @@ create policy "Usuarios actualizan sus datos"
     let currentUser = null;
     let authMode = "login"; // 'login' o 'register'
 
-    /* Estado de la Aplicación en Memoria (Sincronizado con Supabase, sin localStorage) */
+    /* Estado de la Aplicación en Memoria (Sincronizado con Supabase y Tiempo Real) */
     let data = {};
+    let categoriesList = []; // Metadatos de categorías visibles: { id, name, owner_id, owner_email, is_owner, role, members: [] }
+    let categoriesMeta = {}; // Mapa rápido: catName -> meta
+    let currentShareCat = null; // Categoría seleccionada actualmente en el modal de compartir
+    let realtimeChannel = null;
+    let realtimeToastTimer = null;
+
     let userConfig = {
         hourlyRate: 0,
         recurrents: [],
@@ -1321,9 +1595,15 @@ create policy "Usuarios actualizan sus datos"
     async function signOutUser() {
         if (!supabaseClient) return;
         if (confirm("¿Deseas cerrar la sesión de tu cuenta?")) {
+            if (realtimeChannel) {
+                try { supabaseClient.removeChannel(realtimeChannel); } catch (e) {}
+                realtimeChannel = null;
+            }
             await supabaseClient.auth.signOut();
             currentUser = null;
             data = {};
+            categoriesList = [];
+            categoriesMeta = {};
             userConfig = { hourlyRate: 0, recurrents: [], reparto_config: {}, auto_rules: [], auto_model: {}, last_recurrent_check: "" };
             document.getElementById('authOverlay').style.display = 'flex';
             document.getElementById('authPassword').value = '';
@@ -1350,30 +1630,30 @@ create policy "Usuarios actualizan sus datos"
         const badge = document.getElementById('syncStatusBadge');
         if (!badge) return;
         badge.className = `sync-badge ${status}`;
-        badge.innerText = text || (status === 'saving' ? '⏳ Guardando...' : status === 'error' ? '⚠️ Error' : '☁️ Sincronizado');
+        badge.innerText = text || (status === 'saving' ? '⏳ Guardando...' : status === 'error' ? '⚠️ Error' : '⚡ En tiempo real');
     }
 
     /* =========================================================
-       CARGA Y GUARDADO EN LA BASE DE DATOS DE SUPABASE
+       CARGA Y GUARDADO MULTIUSUARIO EN SUPABASE
        ========================================================= */
-    async function loadFromSupabase() {
+    async function loadFromSupabase(silent = false) {
         if (!supabaseClient || !currentUser) return;
-        updateSyncStatus('saving', 'Cargando datos...');
+        if (!silent) updateSyncStatus('saving', 'Cargando datos...');
 
         try {
-            const { data: record, error } = await supabaseClient
-                .from('user_finanzas')
-                .select('data, config')
-                .eq('user_id', currentUser.id)
-                .maybeSingle();
+            // 1. Cargar categorías accesibles para este usuario (propias o compartidas por RLS)
+            const { data: catRows, error: catErr } = await supabaseClient
+                .from('categories')
+                .select('*')
+                .order('name');
 
-            if (error) {
-                if (error.code === 'PGRST205' || error.message.includes('user_finanzas')) {
+            if (catErr) {
+                if (catErr.code === 'PGRST205' || catErr.message.includes('categories')) {
                     // La tabla no existe en Supabase todavía
                     document.getElementById('tableWarningBanner').style.display = 'flex';
-                    updateSyncStatus('error', 'Falta crear tabla SQL');
+                    updateSyncStatus('error', 'Falta crear tablas SQL');
                 } else {
-                    console.error("Error al cargar de Supabase:", error);
+                    console.error("Error al cargar categorías de Supabase:", catErr);
                     updateSyncStatus('error', 'Error de lectura');
                 }
                 return;
@@ -1381,37 +1661,133 @@ create policy "Usuarios actualizan sus datos"
 
             document.getElementById('tableWarningBanner').style.display = 'none';
 
-            if (record && record.data) {
-                data = record.data || {};
-                userConfig = Object.assign(userConfig, record.config || {});
+            // 2. Cargar miembros / permisos de carpetas
+            const { data: memberRows, error: memberErr } = await supabaseClient
+                .from('category_members')
+                .select('*');
+
+            // 3. Cargar todos los movimientos de las categorías accesibles
+            const { data: expenseRows, error: expErr } = await supabaseClient
+                .from('expenses')
+                .select('*')
+                .order('date', { ascending: false });
+
+            // 4. Cargar preferencias personales (user_config o fallback a user_finanzas)
+            const { data: cfgRow } = await supabaseClient
+                .from('user_config')
+                .select('config')
+                .eq('user_id', currentUser.id)
+                .maybeSingle();
+
+            if (cfgRow && cfgRow.config) {
+                userConfig = Object.assign(userConfig, cfgRow.config);
             } else {
-                // Nuevo usuario: inicializar con categorías básicas
-                data = {
-                    "Supermercado": [],
-                    "Alquiler": [],
-                    "Transporte": [],
-                    "Ocio": []
-                };
-                userConfig = {
-                    hourlyRate: 0,
-                    recurrents: [],
-                    reparto_config: {},
-                    auto_rules: [],
-                    auto_model: {},
-                    last_recurrent_check: ""
-                };
-                await saveToSupabase();
+                // Fallback a user_finanzas si existían datos anteriores
+                try {
+                    const { data: legacyRow } = await supabaseClient
+                        .from('user_finanzas')
+                        .select('config')
+                        .eq('user_id', currentUser.id)
+                        .maybeSingle();
+                    if (legacyRow && legacyRow.config) {
+                        userConfig = Object.assign(userConfig, legacyRow.config);
+                        saveConfigToSupabase();
+                    }
+                } catch (legacyErr) {}
             }
 
-            // Aplicar configuraciones en los inputs de la vista
+            // Si es un usuario nuevo y no tiene ninguna categoría: crear categorías básicas
+            if ((!catRows || catRows.length === 0) && !silent) {
+                const defaults = ["Supermercado", "Alquiler", "Transporte", "Ocio"];
+                for (const dName of defaults) {
+                    await supabaseClient.from('categories').insert({
+                        name: dName,
+                        owner_id: currentUser.id,
+                        owner_email: currentUser.email || ''
+                    });
+                }
+                return await loadFromSupabase(true);
+            }
+
+            // Mapear miembros por categoría
+            const membersByCat = {};
+            if (memberRows) {
+                memberRows.forEach(m => {
+                    if (!membersByCat[m.category_id]) membersByCat[m.category_id] = [];
+                    membersByCat[m.category_id].push(m);
+                });
+            }
+
+            // Mapear gastos por category_id
+            const expensesByCatId = {};
+            if (expenseRows) {
+                expenseRows.forEach(exp => {
+                    if (!expensesByCatId[exp.category_id]) expensesByCatId[exp.category_id] = [];
+                    expensesByCatId[exp.category_id].push({
+                        id: exp.id,
+                        category_id: exp.category_id,
+                        desc: exp.desc,
+                        amount: Number(exp.amount),
+                        date: exp.date,
+                        tags: exp.tags || '',
+                        created_by: exp.created_by,
+                        created_by_email: exp.created_by_email || ''
+                    });
+                });
+            }
+
+            // Construir categoriesList, categoriesMeta y data
+            categoriesList = [];
+            categoriesMeta = {};
+            const newData = {};
+
+            (catRows || []).forEach(cat => {
+                const isOwner = cat.owner_id === currentUser.id;
+                const catMembers = membersByCat[cat.id] || [];
+                
+                let userRole = isOwner ? 'owner' : 'viewer';
+                if (!isOwner) {
+                    const myMembership = catMembers.find(m => 
+                        (m.user_id && m.user_id === currentUser.id) || 
+                        (m.user_email && m.user_email.toLowerCase() === (currentUser.email || '').toLowerCase())
+                    );
+                    if (myMembership) userRole = myMembership.role || 'viewer';
+                }
+
+                const meta = {
+                    id: cat.id,
+                    name: cat.name,
+                    owner_id: cat.owner_id,
+                    owner_email: cat.owner_email,
+                    is_owner: isOwner,
+                    is_shared: isOwner ? catMembers.length > 0 : true,
+                    role: userRole,
+                    members: catMembers
+                };
+
+                categoriesList.push(meta);
+                categoriesMeta[cat.name] = meta;
+                newData[cat.name] = expensesByCatId[cat.id] || [];
+            });
+
+            data = newData;
+
+            // Aplicar configuraciones en inputs
             const hrInput = document.getElementById('hourlyRate');
             if (hrInput && userConfig.hourlyRate) hrInput.value = userConfig.hourlyRate;
 
             checkRecurrents();
             renderAll();
+            if (activeCat && categoriesMeta[activeCat]) {
+                renderItems();
+            }
             fillRuleCatSelector();
             renderAutoRules();
-            updateSyncStatus('success', '☁️ Sincronizado');
+
+            // Activar suscripción Realtime oficial
+            setupRealtime();
+
+            updateSyncStatus('success', '⚡ En tiempo real');
 
         } catch (err) {
             console.error("Excepción en loadFromSupabase:", err);
@@ -1419,48 +1795,325 @@ create policy "Usuarios actualizan sus datos"
         }
     }
 
-    async function saveToSupabase() {
+    async function saveConfigToSupabase() {
         if (!supabaseClient || !currentUser) return;
-        updateSyncStatus('saving', 'Guardando...');
-
         try {
-            const payload = {
-                user_id: currentUser.id,
-                data: data,
-                config: userConfig,
-                updated_at: new Date().toISOString()
-            };
-
-            const { error } = await supabaseClient
-                .from('user_finanzas')
-                .upsert(payload, { onConflict: 'user_id' });
-
-            if (error) {
-                if (error.code === 'PGRST205' || error.message.includes('user_finanzas')) {
-                    document.getElementById('tableWarningBanner').style.display = 'flex';
-                    updateSyncStatus('error', 'Falta tabla SQL');
-                } else {
-                    console.error("Error al guardar en Supabase:", error);
-                    updateSyncStatus('error', 'Error al guardar');
-                }
-            } else {
-                document.getElementById('tableWarningBanner').style.display = 'none';
-                updateSyncStatus('success', '☁️ Sincronizado');
-            }
+            await supabaseClient
+                .from('user_config')
+                .upsert({
+                    user_id: currentUser.id,
+                    config: userConfig,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'user_id' });
         } catch (err) {
-            console.error("Excepción en saveToSupabase:", err);
-            updateSyncStatus('error', 'Error al guardar');
+            console.error("Error guardando user_config:", err);
         }
     }
 
     function save() {
         renderAll();
-        saveToSupabase();
+        saveConfigToSupabase();
     }
 
     async function forceSyncWithCloud() {
         await loadFromSupabase();
-        alert("Sincronización completada con Supabase.");
+        alert("Sincronización completada con Supabase en tiempo real.");
+    }
+
+    /* =========================================================
+       SINCRONIZACIÓN EN TIEMPO REAL (SUPABASE REALTIME)
+       ========================================================= */
+    function setupRealtime() {
+        if (!supabaseClient || !currentUser) return;
+        if (realtimeChannel) {
+            try { supabaseClient.removeChannel(realtimeChannel); } catch (e) {}
+            realtimeChannel = null;
+        }
+
+        realtimeChannel = supabaseClient.channel('realtime_finanzas_hub')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, payload => {
+                handleRealtimeExpenseEvent(payload);
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, payload => {
+                loadFromSupabase(true);
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'category_members' }, payload => {
+                loadFromSupabase(true);
+            })
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    updateSyncStatus('success', '⚡ En tiempo real');
+                }
+            });
+    }
+
+    function handleRealtimeExpenseEvent(payload) {
+        const { eventType, new: newRow, old: oldRow } = payload;
+        
+        if (eventType === 'INSERT') {
+            const catMeta = categoriesList.find(c => c.id === newRow.category_id);
+            if (!catMeta) return;
+
+            if (!data[catMeta.name]) data[catMeta.name] = [];
+            const exists = data[catMeta.name].some(item => item.id === newRow.id);
+            if (!exists) {
+                data[catMeta.name].unshift({
+                    id: newRow.id,
+                    category_id: newRow.category_id,
+                    desc: newRow.desc,
+                    amount: Number(newRow.amount),
+                    date: newRow.date,
+                    tags: newRow.tags || '',
+                    created_by: newRow.created_by,
+                    created_by_email: newRow.created_by_email || ''
+                });
+                renderAll();
+                if (activeCat === catMeta.name) renderItems();
+                showRealtimeToast(`⚡ Nuevo movimiento en ${catMeta.name}: "${newRow.desc}" (${formatAmt(newRow.amount)})`);
+            }
+        } else if (eventType === 'UPDATE') {
+            const catMeta = categoriesList.find(c => c.id === newRow.category_id);
+            if (!catMeta || !data[catMeta.name]) return;
+
+            const idx = data[catMeta.name].findIndex(item => item.id === newRow.id);
+            if (idx !== -1) {
+                data[catMeta.name][idx] = {
+                    id: newRow.id,
+                    category_id: newRow.category_id,
+                    desc: newRow.desc,
+                    amount: Number(newRow.amount),
+                    date: newRow.date,
+                    tags: newRow.tags || '',
+                    created_by: newRow.created_by,
+                    created_by_email: newRow.created_by_email || ''
+                };
+                renderAll();
+                if (activeCat === catMeta.name) renderItems();
+                showRealtimeToast(`⚡ Movimiento actualizado en ${catMeta.name}`);
+            }
+        } else if (eventType === 'DELETE') {
+            for (const catName in data) {
+                const idx = data[catName].findIndex(item => item.id === oldRow.id);
+                if (idx !== -1) {
+                    data[catName].splice(idx, 1);
+                    renderAll();
+                    if (activeCat === catName) renderItems();
+                    showRealtimeToast(`⚡ Un movimiento fue eliminado`);
+                    break;
+                }
+            }
+        }
+    }
+
+    function showRealtimeToast(msg) {
+        let toast = document.getElementById('realtimeToast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'realtimeToast';
+            toast.className = 'realtime-toast';
+            document.body.appendChild(toast);
+        }
+        toast.innerText = msg;
+        toast.classList.add('visible');
+        clearTimeout(realtimeToastTimer);
+        realtimeToastTimer = setTimeout(() => {
+            toast.classList.remove('visible');
+        }, 3200);
+    }
+
+    /* =========================================================
+       GESTIÓN DE CARPETAS / CATEGORÍAS COMPARTIDAS
+       ========================================================= */
+    function openShareModal(catName = null) {
+        const targetCat = catName || activeCat;
+        if (!targetCat || !categoriesMeta[targetCat]) return;
+        
+        currentShareCat = categoriesMeta[targetCat];
+        hideModals();
+
+        document.getElementById('shareCatTitle').innerText = targetCat;
+        document.getElementById('shareUserEmail').value = '';
+        const shareMsg = document.getElementById('shareMsg');
+        if (shareMsg) shareMsg.style.display = 'none';
+
+        renderShareMembersList();
+
+        const inviteSec = document.getElementById('shareInviteSection');
+        const leaveSec = document.getElementById('shareLeaveSection');
+
+        if (currentShareCat.is_owner) {
+            if (inviteSec) inviteSec.style.display = 'block';
+            if (leaveSec) leaveSec.style.display = 'none';
+        } else {
+            if (inviteSec) inviteSec.style.display = 'none';
+            if (leaveSec) leaveSec.style.display = 'block';
+        }
+
+        document.getElementById('shareModal').style.display = 'flex';
+    }
+
+    function renderShareMembersList() {
+        const list = document.getElementById('shareMembersList');
+        if (!list || !currentShareCat) return;
+
+        list.innerHTML = '';
+
+        // Propietario
+        const ownerEmail = currentShareCat.owner_email || 'Dueño';
+        const isMeOwner = currentShareCat.is_owner;
+        list.innerHTML += `
+            <div class="member-item">
+                <div class="member-info">
+                    <strong>${ownerEmail}</strong> ${isMeOwner ? '<small style="color:var(--cyan); font-weight:700;"> (Tú)</small>' : ''}
+                </div>
+                <span class="badge-role-owner">👑 Propietario</span>
+            </div>`;
+
+        // Colaboradores invitados
+        const members = currentShareCat.members || [];
+        if (members.length === 0) {
+            if (currentShareCat.is_owner) {
+                list.innerHTML += `<div style="color:var(--text-dark); font-size:0.75rem; padding:8px 0;">Aún no has compartido esta categoría con otros usuarios.</div>`;
+            }
+        } else {
+            members.forEach(m => {
+                const isMeMember = currentUser && ((m.user_id && m.user_id === currentUser.id) || (m.user_email && m.user_email.toLowerCase() === (currentUser.email || '').toLowerCase()));
+                const roleBadge = m.role === 'editor' 
+                    ? `<span class="badge-role-editor">✏️ Editor</span>`
+                    : `<span class="badge-role-viewer">👁️ Lector</span>`;
+
+                let actionBtn = '';
+                if (currentShareCat.is_owner) {
+                    actionBtn = `<button class="btn-icon" onclick="removeMemberFromCategory('${m.id}', '${m.user_email}')" title="Quitar acceso">${ICON_DEL}</button>`;
+                }
+
+                list.innerHTML += `
+                    <div class="member-item">
+                        <div class="member-info">
+                            <strong>${m.user_email}</strong> ${isMeMember ? '<small style="color:var(--cyan); font-weight:700;"> (Tú)</small>' : ''}
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            ${roleBadge}
+                            ${actionBtn}
+                        </div>
+                    </div>`;
+            });
+        }
+    }
+
+    async function submitShareInvitation() {
+        if (!currentShareCat || !currentShareCat.is_owner) return;
+        const emailInput = document.getElementById('shareUserEmail');
+        const roleSelect = document.getElementById('shareUserRole');
+        const email = emailInput.value.trim().toLowerCase();
+        const role = roleSelect.value || 'editor';
+
+        if (!email || !email.includes('@')) {
+            showShareFeedback("Por favor introduce un correo electrónico válido.", "error");
+            return;
+        }
+
+        if (currentUser && email === currentUser.email.toLowerCase()) {
+            showShareFeedback("Ya eres el propietario de esta categoría.", "error");
+            return;
+        }
+
+        const alreadyMember = (currentShareCat.members || []).some(m => m.user_email.toLowerCase() === email);
+        if (alreadyMember) {
+            showShareFeedback("Esta categoría ya está compartida con este usuario.", "error");
+            return;
+        }
+
+        try {
+            showShareFeedback("Compartiendo carpeta...", "info");
+            const { data: newMember, error } = await supabaseClient
+                .from('category_members')
+                .insert({
+                    category_id: currentShareCat.id,
+                    user_email: email,
+                    role: role
+                })
+                .select()
+                .single();
+
+            if (error) {
+                showShareFeedback("Error al compartir: " + error.message, "error");
+                return;
+            }
+
+            if (!currentShareCat.members) currentShareCat.members = [];
+            currentShareCat.members.push(newMember);
+            currentShareCat.is_shared = true;
+
+            showShareFeedback(`¡Categoría compartida con ${email} exitosamente!`, "success");
+            emailInput.value = '';
+            renderShareMembersList();
+            renderAll();
+        } catch (err) {
+            showShareFeedback("Error inesperado: " + err.message, "error");
+        }
+    }
+
+    function showShareFeedback(text, type) {
+        const msgBox = document.getElementById('shareMsg');
+        if (!msgBox) return;
+        msgBox.className = `auth-msg ${type}`;
+        msgBox.innerText = text;
+        msgBox.style.display = 'block';
+    }
+
+    async function removeMemberFromCategory(memberId, userEmail) {
+        if (!currentShareCat || !currentShareCat.is_owner) return;
+        if (!confirm(`¿Revocar acceso a la categoría a ${userEmail}?`)) return;
+
+        try {
+            const { error } = await supabaseClient
+                .from('category_members')
+                .delete()
+                .eq('id', memberId);
+
+            if (error) {
+                alert("Error al revocar acceso: " + error.message);
+                return;
+            }
+
+            currentShareCat.members = currentShareCat.members.filter(m => m.id !== memberId);
+            currentShareCat.is_shared = (currentShareCat.members.length > 0);
+            renderShareMembersList();
+            renderAll();
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    async function leaveCurrentCategory() {
+        if (!currentShareCat || currentShareCat.is_owner) return;
+        if (!confirm(`¿Deseas salir de la categoría compartida "${currentShareCat.name}"? Dejarás de tener acceso a ella.`)) return;
+
+        try {
+            const { error } = await supabaseClient
+                .from('category_members')
+                .delete()
+                .eq('category_id', currentShareCat.id)
+                .or(`user_id.eq.${currentUser.id},user_email.ilike.${currentUser.email}`);
+
+            if (error) {
+                alert("Error al salir de la categoría: " + error.message);
+                return;
+            }
+
+            const catName = currentShareCat.name;
+            delete data[catName];
+            delete categoriesMeta[catName];
+            categoriesList = categoriesList.filter(c => c.id !== currentShareCat.id);
+            
+            hideModals();
+            closeDetail();
+            renderAll();
+            alert("Has salido de la categoría compartida.");
+        } catch (err) {
+            console.error(err);
+        }
     }
 
     /* =========================================================
@@ -1475,32 +2128,66 @@ create policy "Usuarios actualizan sus datos"
         reader.onload = async (e) => {
             try {
                 const imported = JSON.parse(e.target.result);
-                
+                let importedTransactions = {};
+                let importedConfig = {};
+
                 if (imported.version && imported.config) {
-                    data = imported.transacciones || {};
-                    if (imported.config.hourlyRate) userConfig.hourlyRate = imported.config.hourlyRate;
-                    if (imported.config.recurrents) userConfig.recurrents = typeof imported.config.recurrents === 'string' ? JSON.parse(imported.config.recurrents) : imported.config.recurrents;
-                    if (imported.config.reparto_config) userConfig.reparto_config = typeof imported.config.reparto_config === 'string' ? JSON.parse(imported.config.reparto_config) : imported.config.reparto_config;
-                    if (imported.config.auto_rules) userConfig.auto_rules = typeof imported.config.auto_rules === 'string' ? JSON.parse(imported.config.auto_rules) : imported.config.auto_rules;
-                    if (imported.config.auto_model) userConfig.auto_model = typeof imported.config.auto_model === 'string' ? JSON.parse(imported.config.auto_model) : imported.config.auto_model;
-                    if (imported.config.last_recurrent_check) userConfig.last_recurrent_check = imported.config.last_recurrent_check;
+                    importedTransactions = imported.transacciones || {};
+                    importedConfig = imported.config || {};
                 } else {
-                    // Formato antiguo directo (objeto de categorías)
-                    data = imported || {};
+                    importedTransactions = imported || {};
                 }
 
-                // Guardar de inmediato en Supabase
                 updateSyncStatus('saving', 'Volcando a Supabase...');
-                await saveToSupabase();
-                
-                const hrInput = document.getElementById('hourlyRate');
-                if (hrInput && userConfig.hourlyRate) hrInput.value = userConfig.hourlyRate;
-                
-                renderAll();
-                fillRuleCatSelector();
-                renderAutoRules();
-                
-                alert("🎉 ¡Datos importados y volcados con éxito en tu base de datos de Supabase!");
+
+                // Guardar configuración
+                if (importedConfig) {
+                    if (importedConfig.hourlyRate) userConfig.hourlyRate = importedConfig.hourlyRate;
+                    if (importedConfig.recurrents) userConfig.recurrents = typeof importedConfig.recurrents === 'string' ? JSON.parse(importedConfig.recurrents) : importedConfig.recurrents;
+                    if (importedConfig.reparto_config) userConfig.reparto_config = typeof importedConfig.reparto_config === 'string' ? JSON.parse(importedConfig.reparto_config) : importedConfig.reparto_config;
+                    if (importedConfig.auto_rules) userConfig.auto_rules = typeof importedConfig.auto_rules === 'string' ? JSON.parse(importedConfig.auto_rules) : importedConfig.auto_rules;
+                    if (importedConfig.auto_model) userConfig.auto_model = typeof importedConfig.auto_model === 'string' ? JSON.parse(importedConfig.auto_model) : importedConfig.auto_model;
+                    if (importedConfig.last_recurrent_check) userConfig.last_recurrent_check = importedConfig.last_recurrent_check;
+                    await saveConfigToSupabase();
+                }
+
+                // Crear categorías y gastos en las tablas de Supabase
+                for (const catName in importedTransactions) {
+                    let catMeta = categoriesMeta[catName];
+                    let catId = catMeta ? catMeta.id : null;
+
+                    if (!catId) {
+                        const { data: createdCat } = await supabaseClient
+                            .from('categories')
+                            .insert({
+                                name: catName,
+                                owner_id: currentUser.id,
+                                owner_email: currentUser.email || ''
+                            })
+                            .select()
+                            .single();
+                        if (createdCat) catId = createdCat.id;
+                    }
+
+                    if (catId && Array.isArray(importedTransactions[catName])) {
+                        const expPayloads = importedTransactions[catName].map(item => ({
+                            category_id: catId,
+                            desc: item.desc || 'Sin concepto',
+                            amount: Number(item.amount) || 0,
+                            date: item.date || new Date().toISOString().split('T')[0],
+                            tags: item.tags || '',
+                            created_by: currentUser.id,
+                            created_by_email: currentUser.email || ''
+                        }));
+
+                        if (expPayloads.length > 0) {
+                            await supabaseClient.from('expenses').insert(expPayloads);
+                        }
+                    }
+                }
+
+                await loadFromSupabase();
+                alert("🎉 ¡Datos volcados con éxito en la base de datos relacional de Supabase!");
             } catch (err) {
                 alert("Error al leer el archivo JSON: formato no válido.");
                 console.error(err);
@@ -1519,7 +2206,7 @@ create policy "Usuarios actualizan sus datos"
             transacciones: data,
             config: userConfig,
             user: currentUser ? currentUser.email : "anon",
-            version: "12.9_supabase"
+            version: "13.0_multiusuario_realtime"
         };
 
         const jsonString = JSON.stringify(fullBackup, null, 2);
@@ -1692,8 +2379,24 @@ create policy "Usuarios actualizan sus datos"
             let b = sum > 100 ? 'border-safe' : (sum >= 0 ? 'border-warning' : 'border-danger');
             let colorVar = sum >= 0 ? 'var(--green)' : 'var(--red)';
             
+            const meta = categoriesMeta[cat] || {};
+            let shareBadge = '';
+            if (meta.is_owner && meta.members && meta.members.length > 0) {
+                shareBadge = `<div class="cat-badge-shared">👥 Compartida (${meta.members.length})</div>`;
+            } else if (!meta.is_owner && meta.owner_email) {
+                const shortOwner = meta.owner_email.split('@')[0];
+                shareBadge = `<div class="cat-badge-shared incoming">🔗 De: ${shortOwner}</div>`;
+            }
+
+            let roleBadge = '';
+            if (meta.role === 'viewer') {
+                roleBadge = `<div class="cat-badge-role">👁️ Lectura</div>`;
+            }
+
             cont.innerHTML += `
                 <div class="cat-node ${b}" onclick="openDetail('${cat}')">
+                    ${shareBadge}
+                    ${roleBadge}
                     <span class="cat-name">${cat}</span>
                     <span class="cat-amount" style="color:${colorVar}">${formatAmt(sum)}</span>
                 </div>`;
@@ -1928,10 +2631,44 @@ create policy "Usuarios actualizan sus datos"
         activeFilter = null; 
         if (!data[activeCat]) data[activeCat] = [];
         
+        const meta = categoriesMeta[cat] || {};
         const detailView = document.getElementById('detailView');
         detailView.style.display = 'block'; 
         document.getElementById('detTitle').innerText = cat; 
         document.getElementById('itemDate').value = new Date().toISOString().split("T")[0];
+
+        // Estado de compartición y botón
+        const shareInfo = document.getElementById('detShareInfo');
+        const shareBtn = document.getElementById('detShareBtn');
+        const readOnlyNotice = document.getElementById('readOnlyNotice');
+        const itemAddCard = document.getElementById('itemAddCard');
+
+        if (shareInfo) {
+            if (meta.is_owner) {
+                const count = (meta.members || []).length;
+                shareInfo.innerHTML = count > 0 
+                    ? `<span class="badge-role-owner">👑 Propietario</span> <span style="color:var(--cyan);">👥 Compartida (${count})</span>` 
+                    : `<span class="badge-role-owner">👑 Propietario</span> <span style="color:var(--text-dark);">🔒 Privada</span>`;
+            } else {
+                const roleBadge = meta.role === 'editor' 
+                    ? `<span class="badge-role-editor">✏️ Editor</span>` 
+                    : `<span class="badge-role-viewer">👁️ Lector</span>`;
+                shareInfo.innerHTML = `${roleBadge} <span style="color:var(--purple);">🔗 De: ${meta.owner_email || 'otro usuario'}</span>`;
+            }
+        }
+
+        if (shareBtn) {
+            shareBtn.innerHTML = meta.is_owner ? '👥 COMPARTIR CARPETA' : '👥 VER MIEMBROS';
+        }
+
+        // Si el usuario es lector ('viewer'), ocultar formulario de agregar gastos
+        if (meta.role === 'viewer') {
+            if (itemAddCard) itemAddCard.style.display = 'none';
+            if (readOnlyNotice) readOnlyNotice.style.display = 'block';
+        } else {
+            if (itemAddCard) itemAddCard.style.display = 'block';
+            if (readOnlyNotice) readOnlyNotice.style.display = 'none';
+        }
         
         renderItems(); 
         updateTagDropdown(); 
@@ -1977,6 +2714,7 @@ create policy "Usuarios actualizan sus datos"
         list.innerHTML = ''; 
         let sum = 0, tagMap = {};
         const rate = parseFloat(userConfig.hourlyRate) || 0;
+        const meta = categoriesMeta[activeCat] || {};
         
         if (!data[activeCat]) data[activeCat] = [];
         
@@ -1999,22 +2737,39 @@ create policy "Usuarios actualizan sus datos"
             let hH = (i.amount < 0 && rate > 0) ? `<div style="font-size:0.65rem; color:var(--orange); margin-top:2px; font-weight:700;">⏱ ${Math.floor(Math.abs(i.amount)/rate)}h ${Math.round(((Math.abs(i.amount)/rate)%1)*60)}m</div>` : "";
             let colorVar = i.amount >= 0 ? 'var(--green)' : 'var(--red)';
             
+            // Mostrar autor en categorías compartidas
+            let authorBadge = '';
+            if (meta.is_shared && i.created_by_email) {
+                const isMe = currentUser && ((i.created_by && i.created_by === currentUser.id) || (i.created_by_email.toLowerCase() === (currentUser.email || '').toLowerCase()));
+                authorBadge = `<div style="font-size:0.68rem; color:var(--cyan); margin-top:3px; font-weight:600;">
+                    👤 ${isMe ? 'Añadido por ti' : 'Por: ' + i.created_by_email}
+                </div>`;
+            }
+
+            // Botones de acción: ocultar si es modo sólo lectura
+            let actionsHtml = '';
+            if (meta.role !== 'viewer') {
+                actionsHtml = `
+                    <div style="display:flex; gap:6px; margin-top:6px; justify-content:flex-end;">
+                        <button class="btn-icon" onclick="editItem(${realIdx})" title="Editar">${ICON_EDIT}</button>
+                        <button class="btn-icon" onclick="deleteItem(${realIdx})" title="Eliminar">${ICON_DEL}</button>
+                    </div>`;
+            }
+            
             list.innerHTML += `
                 <div class="list-item">
                     <div class="item-info">
                         <small>${i.date}</small>
                         <strong>${i.desc}</strong>
                         <div>${tagsH}</div>
+                        ${authorBadge}
                     </div>
                     <div style="text-align:right;">
                         <span style="color:${colorVar}; font-weight:800; font-family:var(--font-mono); font-size:1.05rem;">
                             ${formatAmt(i.amount)}
                         </span>
                         ${hH}
-                        <div style="display:flex; gap:6px; margin-top:6px; justify-content:flex-end;">
-                            <button class="btn-icon" onclick="editItem(${realIdx})" title="Editar">${ICON_EDIT}</button>
-                            <button class="btn-icon" onclick="deleteItem(${realIdx})" title="Eliminar">${ICON_DEL}</button>
-                        </div>
+                        ${actionsHtml}
                     </div>
                 </div>`;
         });
@@ -2026,7 +2781,14 @@ create policy "Usuarios actualizan sus datos"
         document.getElementById('detTotal').innerText = formatAmt(sum);
     }
 
-    function addItem() {
+    async function addItem() {
+        if (!activeCat) return;
+        const meta = categoriesMeta[activeCat];
+        if (meta && meta.role === 'viewer') {
+            alert("Esta categoría está en modo solo lectura. No tienes permisos para añadir gastos.");
+            return;
+        }
+
         const d = document.getElementById('itemDesc').value.trim();
         const a = parseFloat(document.getElementById('itemAmt').value);
         const dt = document.getElementById('itemDate').value;
@@ -2035,31 +2797,105 @@ create policy "Usuarios actualizan sus datos"
         const idx = parseInt(document.getElementById('editIdx').value);
 
         if (d && !isNaN(a) && dt && activeCat) {
-            const entry = { 
-                desc: d, 
-                amount: t === 'gasto' ? -Math.abs(a) : Math.abs(a), 
-                date: dt, 
-                tags: tg 
-            };
+            const finalAmt = t === 'gasto' ? -Math.abs(a) : Math.abs(a);
             
             if (!data[activeCat]) data[activeCat] = [];
             
             if (idx === -1) {
-                data[activeCat].push(entry);
+                // Nuevo movimiento en Supabase
+                updateSyncStatus('saving', 'Guardando en Supabase...');
+                try {
+                    const { data: newExp, error } = await supabaseClient
+                        .from('expenses')
+                        .insert({
+                            category_id: meta ? meta.id : null,
+                            desc: d,
+                            amount: finalAmt,
+                            date: dt,
+                            tags: tg,
+                            created_by: currentUser ? currentUser.id : null,
+                            created_by_email: currentUser ? currentUser.email : ''
+                        })
+                        .select()
+                        .single();
+
+                    if (error) {
+                        alert("Error al guardar en Supabase: " + error.message);
+                        updateSyncStatus('error', 'Error al guardar');
+                        return;
+                    }
+
+                    const entry = {
+                        id: newExp.id,
+                        category_id: newExp.category_id,
+                        desc: newExp.desc,
+                        amount: Number(newExp.amount),
+                        date: newExp.date,
+                        tags: newExp.tags || '',
+                        created_by: newExp.created_by,
+                        created_by_email: newExp.created_by_email || ''
+                    };
+
+                    data[activeCat].unshift(entry);
+                    learnFrom(d, activeCat);
+                    renderItems();
+                    renderAll();
+                    resetForm();
+                    updateTagDropdown();
+                    updateSyncStatus('success', '⚡ En tiempo real');
+                } catch (err) {
+                    console.error(err);
+                    updateSyncStatus('error', 'Error de red');
+                }
             } else if (idx >= 0 && idx < data[activeCat].length) {
-                data[activeCat][idx] = entry;
+                // Edición de movimiento existente
+                const existing = data[activeCat][idx];
+                updateSyncStatus('saving', 'Actualizando gasto...');
+                try {
+                    if (existing.id) {
+                        const { error } = await supabaseClient
+                            .from('expenses')
+                            .update({
+                                desc: d,
+                                amount: finalAmt,
+                                date: dt,
+                                tags: tg,
+                                updated_at: new Date().toISOString()
+                            })
+                            .eq('id', existing.id);
+
+                        if (error) {
+                            alert("Error al actualizar gasto en Supabase: " + error.message);
+                            return;
+                        }
+                    }
+
+                    existing.desc = d;
+                    existing.amount = finalAmt;
+                    existing.date = dt;
+                    existing.tags = tg;
+
+                    learnFrom(d, activeCat);
+                    renderItems();
+                    renderAll();
+                    resetForm();
+                    updateTagDropdown();
+                    updateSyncStatus('success', '⚡ En tiempo real');
+                } catch (err) {
+                    console.error(err);
+                }
             }
-            
-            learnFrom(d, activeCat);
-            save(); 
-            renderItems(); 
-            resetForm(); 
-            updateTagDropdown();
         }
     }
 
     function editItem(i) { 
         if (!activeCat || !data[activeCat] || !data[activeCat][i]) return;
+        const meta = categoriesMeta[activeCat];
+        if (meta && meta.role === 'viewer') {
+            alert("No tienes permisos para editar en esta categoría (modo sólo lectura).");
+            return;
+        }
+
         const it = data[activeCat][i]; 
         document.getElementById('itemDesc').value = it.desc; 
         document.getElementById('itemAmt').value = Math.abs(it.amount); 
@@ -2072,12 +2908,36 @@ create policy "Usuarios actualizan sus datos"
         document.getElementById('itemDesc').focus();
     }
 
-    function deleteItem(i) { 
-        if (!activeCat || !data[activeCat]) return;
-        if (confirm('¿Eliminar este movimiento?')) { 
-            data[activeCat].splice(i, 1); 
-            save(); 
-            renderItems(); 
+    async function deleteItem(i) { 
+        if (!activeCat || !data[activeCat] || !data[activeCat][i]) return;
+        const meta = categoriesMeta[activeCat];
+        if (meta && meta.role === 'viewer') {
+            alert("No tienes permisos para eliminar gastos en esta categoría.");
+            return;
+        }
+
+        const it = data[activeCat][i]; 
+        if (confirm(`¿Eliminar este movimiento "${it.desc}" de ${formatAmt(it.amount)}?`)) { 
+            try {
+                updateSyncStatus('saving', 'Borrando gasto...');
+                if (it.id) {
+                    const { error } = await supabaseClient
+                        .from('expenses')
+                        .delete()
+                        .eq('id', it.id);
+
+                    if (error) {
+                        alert("Error al borrar en Supabase: " + error.message);
+                        return;
+                    }
+                }
+                data[activeCat].splice(i, 1); 
+                renderItems(); 
+                renderAll();
+                updateSyncStatus('success', '⚡ En tiempo real');
+            } catch (err) {
+                console.error(err);
+            }
         } 
     }
 
@@ -2089,24 +2949,116 @@ create policy "Usuarios actualizan sus datos"
         document.getElementById('itemDate').value = new Date().toISOString().split("T")[0];
     }
 
-    function addCategory() { 
+    async function addCategory() { 
         const n = document.getElementById('newCatName').value.trim(); 
-        if (n && !data[n]) { 
-            data[n] = []; 
-            save(); 
+        if (!n) return;
+        if (categoriesMeta[n]) {
+            alert('Esa categoría ya existe en tu lista');
+            return;
+        }
+
+        if (!currentUser) return alert("Debes iniciar sesión para crear categorías.");
+
+        try {
+            updateSyncStatus('saving', 'Creando categoría...');
+            const { data: newCat, error } = await supabaseClient
+                .from('categories')
+                .insert({
+                    name: n,
+                    owner_id: currentUser.id,
+                    owner_email: currentUser.email || ''
+                })
+                .select()
+                .single();
+
+            if (error) {
+                alert("Error al crear la categoría en Supabase: " + error.message);
+                updateSyncStatus('error', 'Error al crear');
+                return;
+            }
+
+            data[n] = [];
+            const meta = {
+                id: newCat.id,
+                name: newCat.name,
+                owner_id: newCat.owner_id,
+                owner_email: newCat.owner_email,
+                is_owner: true,
+                is_shared: false,
+                role: 'owner',
+                members: []
+            };
+
+            categoriesList.push(meta);
+            categoriesMeta[n] = meta;
+
             hideModals(); 
             document.getElementById('newCatName').value = '';
-        } else if (data[n]) {
-            alert('Esa categoría ya existe');
+            renderAll();
+            fillRuleCatSelector();
+            updateSyncStatus('success', '⚡ En tiempo real');
+        } catch (err) {
+            console.error(err);
         }
     }
 
-    function deleteCategory(c) { 
-        if (confirm(`¿Eliminar definitivamente la categoría "${c}" y todos sus movimientos?`)) { 
-            delete data[c]; 
-            save(); 
-            showDelModal(); 
-        } 
+    async function deleteCategory(c) { 
+        const meta = categoriesMeta[c];
+        if (!meta) return;
+
+        if (meta.is_owner) {
+            if (confirm(`¿Eliminar definitivamente la categoría "${c}", sus movimientos y accesos para todos los colaboradores?`)) { 
+                try {
+                    updateSyncStatus('saving', 'Eliminando categoría...');
+                    const { error } = await supabaseClient
+                        .from('categories')
+                        .delete()
+                        .eq('id', meta.id);
+
+                    if (error) {
+                        alert("Error al eliminar categoría en Supabase: " + error.message);
+                        return;
+                    }
+
+                    delete data[c]; 
+                    delete categoriesMeta[c];
+                    categoriesList = categoriesList.filter(x => x.id !== meta.id);
+                    if (activeCat === c) closeDetail();
+                    renderAll(); 
+                    showDelModal(); 
+                    updateSyncStatus('success', '⚡ En tiempo real');
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+        } else {
+            // Usuario invitado: abandonar la carpeta compartida
+            if (confirm(`¿Deseas salir de la categoría compartida "${c}"? Dejarás de tener acceso a ella.`)) {
+                try {
+                    updateSyncStatus('saving', 'Saliendo de categoría...');
+                    const { error } = await supabaseClient
+                        .from('category_members')
+                        .delete()
+                        .eq('category_id', meta.id)
+                        .or(`user_id.eq.${currentUser.id},user_email.ilike.${currentUser.email}`);
+
+                    if (error) {
+                        alert("Error al salir de la categoría: " + error.message);
+                        return;
+                    }
+
+                    delete data[c]; 
+                    delete categoriesMeta[c];
+                    categoriesList = categoriesList.filter(x => x.id !== meta.id);
+                    if (activeCat === c) closeDetail();
+                    renderAll(); 
+                    showDelModal(); 
+                    updateSyncStatus('success', '⚡ En tiempo real');
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+        }
     }
 
     function renderRepartoConfig() {
@@ -2133,7 +3085,7 @@ create policy "Usuarios actualizan sus datos"
         save();
     }
 
-    function executeReparto() {
+    async function executeReparto() {
         const sueldo = parseFloat(document.getElementById('monthlySalary').value); 
         if (!sueldo || sueldo <= 0) return alert("Sueldo inválido");
         
@@ -2144,20 +3096,50 @@ create policy "Usuarios actualizan sus datos"
         for (let cat in config) totalPerc += Number(config[cat]) || 0; 
         if (totalPerc > 100) return alert("La suma de porcentajes supera el 100%");
         
+        updateSyncStatus('saving', 'Repartiendo sueldo...');
         for (let cat in config) { 
             if (config[cat] > 0) { 
-                if (!data[cat]) data[cat] = [];
-                data[cat].push({ 
-                    desc: "SUELDO MENSUAL", 
-                    amount: (sueldo * config[cat]) / 100, 
-                    date: today, 
-                    tags: "mensual" 
-                }); 
+                const meta = categoriesMeta[cat];
+                if (meta && meta.role === 'viewer') continue; // Omitir categorías sólo lectura
+
+                const partAmt = (sueldo * config[cat]) / 100;
+                try {
+                    const { data: newExp } = await supabaseClient
+                        .from('expenses')
+                        .insert({
+                            category_id: meta ? meta.id : null,
+                            desc: "SUELDO MENSUAL",
+                            amount: partAmt,
+                            date: today,
+                            tags: "mensual",
+                            created_by: currentUser ? currentUser.id : null,
+                            created_by_email: currentUser ? currentUser.email : ''
+                        })
+                        .select()
+                        .single();
+
+                    if (newExp) {
+                        if (!data[cat]) data[cat] = [];
+                        data[cat].unshift({
+                            id: newExp.id,
+                            category_id: newExp.category_id,
+                            desc: newExp.desc,
+                            amount: Number(newExp.amount),
+                            date: newExp.date,
+                            tags: newExp.tags || '',
+                            created_by: newExp.created_by,
+                            created_by_email: newExp.created_by_email || ''
+                        });
+                    }
+                } catch (e) {
+                    console.error("Error al repartir sueldo en " + cat, e);
+                }
             } 
         }
         
         document.getElementById('monthlySalary').value = ""; 
-        save(); 
+        renderAll(); 
+        updateSyncStatus('success', '⚡ En tiempo real');
         alert("Sueldo repartido y guardado en Supabase.");
     }
 
@@ -2203,7 +3185,7 @@ create policy "Usuarios actualizan sus datos"
         renderRecurrents();
     }
 
-    function checkRecurrents() {
+    async function checkRecurrents() {
         const now = new Date();
         const curMonthKey = `${now.getFullYear()}-${now.getMonth() + 1}`;
         if (userConfig.last_recurrent_check === curMonthKey) return; 
@@ -2212,25 +3194,55 @@ create policy "Usuarios actualizan sus datos"
         const today = now.getDate();
         let added = false;
         
-        recs.forEach(r => {
+        for (const r of recs) {
             if (today >= r.day) {
                 const dateStr = `${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2,'0')}-${r.day.toString().padStart(2,'0')}`;
                 if (!data[r.cat]) data[r.cat] = [];
                 const exists = data[r.cat].some(i => i.desc === r.desc && i.date === dateStr);
                 if (!exists) { 
-                    data[r.cat].push({ 
-                        desc: r.desc, 
-                        amount: -Math.abs(r.amt), 
-                        date: dateStr, 
-                        tags: "recurrente" 
-                    }); 
-                    added = true; 
+                    const meta = categoriesMeta[r.cat];
+                    if (meta && meta.role !== 'viewer') {
+                        try {
+                            const { data: newExp } = await supabaseClient
+                                .from('expenses')
+                                .insert({
+                                    category_id: meta.id,
+                                    desc: r.desc,
+                                    amount: -Math.abs(r.amt),
+                                    date: dateStr,
+                                    tags: "recurrente",
+                                    created_by: currentUser ? currentUser.id : null,
+                                    created_by_email: currentUser ? currentUser.email : ''
+                                })
+                                .select()
+                                .single();
+
+                            if (newExp) {
+                                data[r.cat].unshift({
+                                    id: newExp.id,
+                                    category_id: newExp.category_id,
+                                    desc: newExp.desc,
+                                    amount: Number(newExp.amount),
+                                    date: newExp.date,
+                                    tags: newExp.tags || '',
+                                    created_by: newExp.created_by,
+                                    created_by_email: newExp.created_by_email || ''
+                                });
+                                added = true;
+                            }
+                        } catch (e) {
+                            console.error("Error en gasto recurrente:", e);
+                        }
+                    }
                 }
             }
-        });
+        }
         
         userConfig.last_recurrent_check = curMonthKey;
-        if (added) save();
+        if (added) {
+            renderAll();
+            saveConfigToSupabase();
+        }
     }
 
     /* Auto-categorizador en memoria */
@@ -2334,7 +3346,7 @@ create policy "Usuarios actualizan sus datos"
         else hint.innerText = "• Categoría por defecto";
     }
 
-    function saveQuickAdd() {
+    async function saveQuickAdd() {
         const desc = document.getElementById("qDesc").value.trim();
         const amt = parseFloat(document.getElementById("qAmt").value);
         const date = document.getElementById("qDate").value;
@@ -2347,19 +3359,59 @@ create policy "Usuarios actualizan sus datos"
             return;
         }
 
-        const entry = {
-            desc,
-            amount: type === "gasto" ? -Math.abs(amt) : Math.abs(amt),
-            date,
-            tags
-        };
+        const meta = categoriesMeta[cat];
+        if (meta && meta.role === 'viewer') {
+            alert("La categoría seleccionada está en modo sólo lectura. No puedes añadir gastos en ella.");
+            return;
+        }
 
-        if (!data[cat]) data[cat] = [];
-        data[cat].push(entry);
+        const finalAmt = type === "gasto" ? -Math.abs(amt) : Math.abs(amt);
+        updateSyncStatus('saving', 'Añadiendo movimiento...');
 
-        learnFrom(desc, cat);
-        save();
-        hideModals();
+        try {
+            const { data: newExp, error } = await supabaseClient
+                .from('expenses')
+                .insert({
+                    category_id: meta ? meta.id : null,
+                    desc,
+                    amount: finalAmt,
+                    date,
+                    tags,
+                    created_by: currentUser ? currentUser.id : null,
+                    created_by_email: currentUser ? currentUser.email : ''
+                })
+                .select()
+                .single();
+
+            if (error) {
+                alert("Error al guardar: " + error.message);
+                updateSyncStatus('error', 'Error al guardar');
+                return;
+            }
+
+            const entry = {
+                id: newExp.id,
+                category_id: newExp.category_id,
+                desc: newExp.desc,
+                amount: Number(newExp.amount),
+                date: newExp.date,
+                tags: newExp.tags || '',
+                created_by: newExp.created_by,
+                created_by_email: newExp.created_by_email || ''
+            };
+
+            if (!data[cat]) data[cat] = [];
+            data[cat].unshift(entry);
+
+            learnFrom(desc, cat);
+            renderAll();
+            if (activeCat === cat) renderItems();
+            hideModals();
+            updateSyncStatus('success', '⚡ En tiempo real');
+        } catch (err) {
+            console.error(err);
+            updateSyncStatus('error', 'Error de red');
+        }
     }
 
     function renderAutoRules() {
