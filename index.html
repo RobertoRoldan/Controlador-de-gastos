@@ -1256,6 +1256,38 @@
             cursor: not-allowed;
             transform: none;
         }
+
+        /* Estilos Drag and Drop para reordenar Categorías (Widgets) */
+        .cat-node {
+            cursor: grab;
+            position: relative;
+            touch-action: pan-y;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .cat-node:active {
+            cursor: grabbing;
+        }
+        .cat-node.cat-dragging {
+            opacity: 0.35;
+            transform: scale(0.95);
+            border-style: dashed !important;
+        }
+        .cat-node.cat-drag-over {
+            border-color: var(--cyan) !important;
+            box-shadow: 0 0 20px var(--cyan-glow) !important;
+            transform: scale(1.04);
+        }
+        .cat-node .drag-handle-hint {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.18);
+            pointer-events: none;
+            line-height: 1;
+            letter-spacing: -1px;
+        }
     </style>
 </head>
 <body>
@@ -1375,128 +1407,6 @@
                 <canvas id="statsChart"></canvas>
             </div>
             <div id="statsPeriodTotal" class="total-label" style="font-size: 2.2rem; text-align:center; margin-top:16px;">0.00€</div>
-        </div>
-    </div>
-
-    <!-- PESTAÑA GEMINI: ASISTENTE FINANCIERO IA -->
-    <div id="geminiView" class="view">
-        <!-- Cabecera del Asistente -->
-        <div class="glass-card" style="margin-bottom:12px; position:relative; overflow:hidden;">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-                <div>
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        <span style="font-size:1.4rem;">✨</span>
-                        <h2 style="font-size:1.25rem; font-weight:900; background:linear-gradient(135deg, #a855f7, #06b6d4); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin:0;">
-                            Asistente Gemini IA
-                        </h2>
-                    </div>
-                    <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
-                        Consultas con cálculo exacto basadas en tus gastos reales
-                    </div>
-                </div>
-                <div style="display:flex; gap:8px; align-items:center;">
-                    <span id="geminiKeyStatusBadge" class="gemini-status-badge key-missing">
-                        ⚠️ Sin Clave API
-                    </span>
-                    <button class="btn-outline" style="width:auto; padding:5px 11px; font-size:0.72rem; border-color:var(--purple); color:var(--purple);" onclick="GeminiAssistant.toggleInlineKeyCard()" title="Configurar clave API">
-                        🔑 Clave API
-                    </button>
-                    <button class="btn-outline" style="width:auto; padding:5px 11px; font-size:0.72rem; border-color:var(--border);" onclick="GeminiAssistant.clearChat()" title="Limpiar conversación">
-                        🗑️ Limpiar
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tarjeta Desplegable para Configuración Rápida de Clave API -->
-        <div id="geminiInlineKeyCard" class="glass-card" style="display:none; border-color:rgba(168,85,247,0.4); background:rgba(18,24,38,0.95); margin-bottom:12px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                <h4 style="margin:0; color:var(--cyan); font-size:0.9rem;">Configurar Clave API de Google Gemini</h4>
-                <button class="btn-gemini-action" onclick="GeminiAssistant.toggleInlineKeyCard()">✕</button>
-            </div>
-            <p style="font-size:0.76rem; color:var(--text-muted); margin-bottom:10px; line-height:1.4;">
-                Tu clave se guarda exclusivamente en tu navegador (<code>localStorage</code>) y nunca queda expuesta en GitHub ni en código público.
-            </p>
-            <div style="display:flex; gap:8px; margin-bottom:8px;">
-                <input type="password" id="geminiInlineKeyInput" placeholder="Pega tu API Key de Gemini (AIzaSy...)" style="margin-bottom:0;">
-                <button class="btn-outline" style="width:auto; padding:0 12px;" type="button" onclick="GeminiAssistant.toggleKeyVisibility('geminiInlineKeyInput', this)">👁️</button>
-            </div>
-            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                <button class="btn-primary" style="flex:1; padding:10px 14px; font-size:0.8rem; background:var(--purple); min-width:140px;" onclick="GeminiAssistant.saveKeyFromInline()">
-                    💾 VERIFICAR Y GUARDAR
-                </button>
-                <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" class="btn-outline" style="flex:1; padding:10px 14px; font-size:0.8rem; text-align:center; text-decoration:none; display:inline-block; border-color:var(--cyan); color:var(--cyan); min-width:140px;">
-                    ↗ Obtener clave gratis
-                </a>
-            </div>
-            <div id="geminiInlineKeyStatus" style="font-size:0.75rem; margin-top:8px;"></div>
-        </div>
-
-        <!-- Selector de Alcance y Filtro de Contexto -->
-        <div class="glass-card" style="padding:12px 16px; margin-bottom:12px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:4px;">
-                <span style="font-size:0.70rem; color:var(--text-muted); font-weight:800; text-transform:uppercase; letter-spacing:0.8px;">
-                    🎯 Datos incluidos en la consulta:
-                </span>
-                <span id="geminiContextBadge" style="font-size:0.72rem; color:var(--cyan); font-family:var(--font-mono); font-weight:700;">
-                    📊 Calculando...
-                </span>
-            </div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
-                <select id="geminiScopePeriod" onchange="GeminiAssistant.updateContextStats()" style="margin-bottom:0; font-size:0.82rem; padding:10px 12px;">
-                    <option value="all" selected>Todo el historial</option>
-                    <option value="this_month">Este mes en curso</option>
-                    <option value="last_30_days">Últimos 30 días</option>
-                    <option value="this_year">Este año</option>
-                    <option value="last_month">Mes anterior</option>
-                </select>
-                <select id="geminiScopeCategory" onchange="GeminiAssistant.updateContextStats()" style="margin-bottom:0; font-size:0.82rem; padding:10px 12px;">
-                    <option value="all" selected>Todas las categorías</option>
-                </select>
-            </div>
-        </div>
-
-        <!-- Píldoras de Sugerencias de Consulta Rápida -->
-        <div class="gemini-chip-container">
-            <button class="gemini-chip" onclick="GeminiAssistant.askSuggestion('¿Cuánto he gastado este mes y en qué categorías principales?')">
-                <span>📅</span> ¿Gasto de este mes?
-            </button>
-            <button class="gemini-chip" onclick="GeminiAssistant.askSuggestion('Hazme una tabla con el desglose de gastos por categoría y porcentaje del total.')">
-                <span>📊</span> Desglose en tabla (%)
-            </button>
-            <button class="gemini-chip" onclick="GeminiAssistant.askSuggestion('¿Cuál ha sido mi mayor gasto individual y en qué fecha se realizó?')">
-                <span>🔝</span> Mayor gasto registrado
-            </button>
-            <button class="gemini-chip" onclick="GeminiAssistant.askSuggestion('¿Cuántas horas de trabajo representan mis gastos de acuerdo con mi salario hora?')">
-                <span>⏳</span> Equivalencia en horas de vida
-            </button>
-            <button class="gemini-chip" onclick="GeminiAssistant.askSuggestion('Compara el gasto de mis tres principales categorías y dime qué conclusiones exactas se observan.')">
-                <span>🔍</span> Comparativa de categorías
-            </button>
-        </div>
-
-        <!-- Contenedor del Chat / Respuestas -->
-        <div id="geminiChatMessages" class="gemini-chat-container"></div>
-
-        <!-- Indicador de Carga Animado -->
-        <div id="geminiLoadingIndicator" class="gemini-loading">
-            <div class="gemini-spinner"></div>
-            <div>
-                <strong style="color:var(--text); font-size:0.86rem; display:block;">Gemini analizando tus transacciones...</strong>
-                <span style="font-size:0.75rem; color:var(--text-muted);">Calculando sumas, porcentajes y desgloses exactos sin alucinaciones.</span>
-            </div>
-        </div>
-
-        <!-- Input de Pregunta y Botón de Envío -->
-        <div class="gemini-input-card">
-            <div class="gemini-input-row">
-                <textarea id="geminiQuestionInput" class="gemini-textarea" rows="1" placeholder="Pregunta sobre tus gastos (ej: ¿Cuánto gasté en comida este mes?)..."></textarea>
-                <button id="geminiSendBtn" class="btn-gemini-send" onclick="GeminiAssistant.submitQuery()" title="Enviar a Gemini">
-                    <svg viewBox="0 0 24 24" fill="#fff" width="20" height="20">
-                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-                    </svg>
-                </button>
-            </div>
         </div>
     </div>
 
@@ -1661,7 +1571,6 @@
     <button class="tab-btn active" onclick="switchTab('cats', this)">CATEGORÍAS</button>
     <button class="tab-btn" onclick="switchTab('history', this)">HISTORIAL</button>
     <button class="tab-btn" onclick="switchTab('stats', this)">ESTADÍSTICAS</button>
-    <button class="tab-btn" id="tabGeminiBtn" onclick="switchTab('gemini', this)">✨ GEMINI IA</button>
     <button class="tab-btn" onclick="switchTab('settings', this)">AJUSTES</button>
 </div>
 
@@ -1984,6 +1893,141 @@ end $$;</div>
 <div id="realtimeToast" class="realtime-toast"></div>
 
 <!-- =========================================================
+     MODAL GEMINI IA: ASISTENTE FINANCIERO (Flotante desde FAB)
+     ========================================================= -->
+<div id="geminiModal" class="modal" style="align-items:flex-end; padding:0;">
+    <div class="modal-content" style="max-width:680px; width:100%; max-height:92vh; height:92vh; display:flex; flex-direction:column; border-radius:24px 24px 0 0; padding:18px 18px 12px 18px; margin:0 auto; box-sizing:border-box;">
+        
+        <!-- Header del Modal -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-shrink:0;">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:1.35rem;">✨</span>
+                <div>
+                    <h2 class="gemini-title" style="margin:0; font-size:1.15rem;">Gemini IA Asistente</h2>
+                    <span style="font-size:0.7rem; color:var(--text-muted);">Consultas inteligentes sobre tus gastos reales</span>
+                </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px;">
+                <button class="gemini-btn-secondary" onclick="GeminiAssistant.toggleInlineKeyCard()" title="Gestionar clave API">
+                    🔑 <span style="display:none;" class="gemini-btn-label">API Key</span>
+                </button>
+                <button class="gemini-btn-secondary" onclick="GeminiAssistant.clearChat()" title="Limpiar conversación">
+                    🗑️
+                </button>
+                <button class="btn-icon" onclick="hideModals()" style="font-size:1.2rem; color:var(--text-muted); padding:4px 8px;" title="Cerrar">✕</button>
+            </div>
+        </div>
+
+        <!-- Tarjeta de estado de API Key e inserción rápida -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-shrink:0;">
+            <span id="geminiKeyStatusBadge" class="gemini-status-badge key-missing">
+                ⚠️ Sin Clave API
+            </span>
+            <button class="gemini-btn-secondary" onclick="GeminiAssistant.toggleInlineKeyCard()" style="font-size:0.75rem; padding:4px 10px;">
+                ⚙️ Configurar Clave
+            </button>
+        </div>
+
+        <!-- Formulario desplegable para configurar Clave API -->
+        <div id="geminiInlineKeyCard" class="gemini-inline-key-card" style="flex-shrink:0;">
+            <div style="font-weight:700; color:var(--purple); margin-bottom:6px; font-size:0.85rem;">
+                🔑 Clave API de Google Gemini
+            </div>
+            <p style="font-size:0.75rem; color:var(--text-muted); margin:0 0 8px 0; line-height:1.35;">
+                Tu clave se almacena exclusivamente en tu navegador y en tu configuración privada de Supabase. Obtén una gratis en 
+                <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" style="color:var(--cyan); text-decoration:underline;">Google AI Studio</a>.
+            </p>
+            <div style="display:flex; gap:8px; margin-bottom:6px;">
+                <input type="password" id="geminiInlineKeyInput" placeholder="Pega tu clave AIzaSy..." style="flex:1; margin-bottom:0; font-family:monospace; font-size:0.82rem; padding:8px 12px;">
+                <button class="btn-primary" style="background:var(--purple); color:#fff; width:auto; padding:8px 14px; font-size:0.8rem; flex-shrink:0;" onclick="GeminiAssistant.saveInlineKey()">
+                    Guardar
+                </button>
+            </div>
+            <div id="geminiInlineKeyStatus" style="font-size:0.75rem; min-height:16px;"></div>
+        </div>
+
+        <!-- Filtros de Contexto de Gastos -->
+        <div class="glass-card" style="padding:10px 12px; margin-bottom:10px; background:rgba(255,255,255,0.02); flex-shrink:0;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <div style="font-size:0.7rem; color:var(--text-muted); font-weight:800; letter-spacing:0.8px; text-transform:uppercase;">
+                    Contexto de Datos Reales
+                </div>
+                <span id="geminiContextBadge" class="gemini-context-badge">0 gastos (0.00€)</span>
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                <div>
+                    <select id="geminiScopePeriod" onchange="GeminiAssistant.updateContextStats()" style="margin-bottom:0; font-size:0.8rem; padding:6px 10px;">
+                        <option value="all">Todo el historial</option>
+                        <option value="this_month" selected>Este mes actual</option>
+                        <option value="last_month">Mes pasado</option>
+                        <option value="last_3_months">Últimos 3 meses</option>
+                        <option value="this_year">Este año</option>
+                    </select>
+                </div>
+                <div>
+                    <select id="geminiScopeCategory" onchange="GeminiAssistant.updateContextStats()" style="margin-bottom:0; font-size:0.8rem; padding:6px 10px;">
+                        <option value="all">Todas las categorías</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sugerencias Rápidas (Chips) -->
+        <div class="gemini-chip-container" style="flex-shrink:0;">
+            <div class="gemini-chip" onclick="GeminiAssistant.askChip('¿En qué categoría he gastado más en este periodo y cuánto representa del total?')">
+                📊 Mayor gasto
+            </div>
+            <div class="gemini-chip" onclick="GeminiAssistant.askChip('Hazme un resumen detallado con tabla de mis gastos de este periodo, agrupados por categoría.')">
+                📋 Tabla resumen
+            </div>
+            <div class="gemini-chip" onclick="GeminiAssistant.askChip('¿Cuáles son mis 5 compras individuales más caras en este periodo?')">
+                🔝 Top 5 compras
+            </div>
+            <div class="gemini-chip" onclick="GeminiAssistant.askChip('Compara mis ingresos contra mis gastos y dime mi tasa de ahorro real.')">
+                ⚖️ Balance y ahorro
+            </div>
+            <div class="gemini-chip" onclick="GeminiAssistant.askChip('Detecta anomalías, patrones o gastos prescindibles en mis datos y dame 3 consejos de ahorro concretos.')">
+                💡 Consejos de ahorro
+            </div>
+        </div>
+
+        <!-- Área de Conversación (Scrollable) -->
+        <div id="geminiChatMessages" class="gemini-chat-container" style="flex:1; overflow-y:auto; min-height:120px;">
+            <div class="gemini-msg gemini-msg-assistant">
+                <div class="gemini-msg-role">Gemini IA</div>
+                <div class="gemini-msg-content">
+                    ¡Hola! Soy tu asistente financiero impulsado por <strong>Google Gemini</strong>.
+                    <br><br>
+                    Tengo acceso en tiempo real a tus gastos reales de la aplicación según el periodo y la categoría seleccionados arriba. Pregúntame lo que quieras (totales, desglose por categorías, comparativas, mayores gastos o consejos de ahorro).
+                </div>
+            </div>
+        </div>
+
+        <!-- Indicador de Carga -->
+        <div id="geminiLoadingIndicator" class="gemini-loading" style="flex-shrink:0;">
+            <div class="gemini-spinner"></div>
+            <div>
+                <div style="font-size:0.85rem; font-weight:700; color:#fff;">Gemini está analizando tus gastos reales...</div>
+                <div style="font-size:0.72rem; color:var(--text-muted);">Calculando sumas, métricas y comparativas sin alucinaciones</div>
+            </div>
+        </div>
+
+        <!-- Entrada de Texto y Envío -->
+        <div class="gemini-input-card" style="flex-shrink:0;">
+            <div class="gemini-input-row">
+                <textarea id="geminiQuestionInput" class="gemini-textarea" placeholder="Pregúntale a Gemini sobre tus gastos... (Shift+Enter para nueva línea)" rows="1" onkeydown="GeminiAssistant.handleKeyDown(event)"></textarea>
+                <button id="geminiSendBtn" class="btn-gemini-send" onclick="GeminiAssistant.sendQuestion()" title="Enviar consulta">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- =========================================================
      LÓGICA JAVASCRIPT: SUPABASE AUTH & CLOUD DATABASE
      ========================================================= */ -->
 <script>
@@ -2009,7 +2053,8 @@ end $$;</div>
         reparto_config: {},
         auto_rules: [],
         auto_model: {},
-        last_recurrent_check: ""
+        last_recurrent_check: "",
+        cat_order: []
     };
 
     // Exponer datos y métodos del sistema de forma modular para Gemini Assistant
@@ -2131,7 +2176,7 @@ end $$;</div>
             data = {};
             categoriesList = [];
             categoriesMeta = {};
-            userConfig = { hourlyRate: 0, recurrents: [], reparto_config: {}, auto_rules: [], auto_model: {}, last_recurrent_check: "" };
+            userConfig = { hourlyRate: 0, recurrents: [], reparto_config: {}, auto_rules: [], auto_model: {}, last_recurrent_check: "", cat_order: [] };
             document.getElementById('authOverlay').style.display = 'flex';
             document.getElementById('authPassword').value = '';
             setAuthMode('login');
@@ -2898,7 +2943,14 @@ end $$;</div>
         if (recCatSel) recCatSel.innerHTML = '';
         if (selCat) selCat.innerHTML = '<option value="global">Global</option>';
         
-        for (let cat in data) {
+        // Obtener claves en el orden personalizado guardado por el usuario
+        const allKeys = Object.keys(data || {});
+        const savedOrder = Array.isArray(userConfig.cat_order) ? userConfig.cat_order : [];
+        const orderedCats = savedOrder.filter(c => allKeys.includes(c));
+        const remainingCats = allKeys.filter(c => !orderedCats.includes(c));
+        const sortedCats = [...orderedCats, ...remainingCats];
+
+        for (let cat of sortedCats) {
             if (!Array.isArray(data[cat])) data[cat] = [];
             let sum = data[cat].reduce((a, b) => a + (Number(b.amount) || 0), 0); 
             global += sum;
@@ -2921,7 +2973,19 @@ end $$;</div>
             }
 
             cont.innerHTML += `
-                <div class="cat-node ${b}" onclick="openDetail('${cat}')">
+                <div class="cat-node ${b}"
+                     draggable="true"
+                     data-cat="${cat}"
+                     onclick="handleCatClick(event, '${cat}')"
+                     ondragstart="handleCatDragStart(event)"
+                     ondragover="handleCatDragOver(event)"
+                     ondragleave="handleCatDragLeave(event)"
+                     ondrop="handleCatDrop(event)"
+                     ondragend="handleCatDragEnd(event)"
+                     ontouchstart="handleCatTouchStart(event)"
+                     ontouchmove="handleCatTouchMove(event)"
+                     ontouchend="handleCatTouchEnd(event)">
+                    <span class="drag-handle-hint" title="Mantén pulsado y arrastra para reordenar">⠿</span>
                     ${shareBadge}
                     ${roleBadge}
                     <span class="cat-name">${cat}</span>
@@ -2946,6 +3010,178 @@ end $$;</div>
         if (window.GeminiAssistant && typeof window.GeminiAssistant.updateContextStats === 'function') {
             window.GeminiAssistant.updateContextStats();
         }
+    }
+
+    /* =========================================================
+       REORDENACIÓN DE CATEGORÍAS (DRAG & DROP Y TOUCH MÓVIL)
+       ========================================================= */
+    let draggedCatName = null;
+    let touchDraggingCat = null;
+    let touchLongPressTimer = null;
+    let touchCloneEl = null;
+    let touchOffsetX = 0;
+    let touchOffsetY = 0;
+    let touchMoved = false;
+    let suppressClickUntil = 0;
+
+    function handleCatClick(event, cat) {
+        if (Date.now() < suppressClickUntil) {
+            event.preventDefault();
+            event.stopPropagation();
+            return;
+        }
+        openDetail(cat);
+    }
+
+    // Drag & Drop HTML5 estándar (Escritorio / Ratón)
+    function handleCatDragStart(e) {
+        draggedCatName = e.currentTarget.dataset.cat;
+        e.currentTarget.classList.add('cat-dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', draggedCatName);
+    }
+
+    function handleCatDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        const node = e.currentTarget;
+        if (!node.classList.contains('cat-drag-over')) {
+            node.classList.add('cat-drag-over');
+        }
+    }
+
+    function handleCatDragLeave(e) {
+        e.currentTarget.classList.remove('cat-drag-over');
+    }
+
+    function handleCatDrop(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const targetNode = e.currentTarget;
+        targetNode.classList.remove('cat-drag-over');
+        const targetCat = targetNode.dataset.cat;
+        if (draggedCatName && targetCat && draggedCatName !== targetCat) {
+            reorderCategories(draggedCatName, targetCat);
+        }
+        draggedCatName = null;
+    }
+
+    function handleCatDragEnd(e) {
+        e.currentTarget.classList.remove('cat-dragging');
+        document.querySelectorAll('.cat-node').forEach(n => n.classList.remove('cat-drag-over', 'cat-dragging'));
+        draggedCatName = null;
+    }
+
+    // Soporte Touch Móvil (Pulsación larga para levantar y mover estilo widget)
+    function handleCatTouchStart(e) {
+        const node = e.currentTarget;
+        const cat = node.dataset.cat;
+        touchMoved = false;
+
+        touchLongPressTimer = setTimeout(() => {
+            touchDraggingCat = cat;
+            node.classList.add('cat-dragging');
+
+            if (navigator.vibrate) {
+                try { navigator.vibrate(35); } catch (_) {}
+            }
+
+            const rect = node.getBoundingClientRect();
+            const touch = e.touches[0];
+            touchOffsetX = touch.clientX - rect.left;
+            touchOffsetY = touch.clientY - rect.top;
+
+            // Crear elemento flotante clonado
+            touchCloneEl = node.cloneNode(true);
+            touchCloneEl.style.position = 'fixed';
+            touchCloneEl.style.left = rect.left + 'px';
+            touchCloneEl.style.top = rect.top + 'px';
+            touchCloneEl.style.width = rect.width + 'px';
+            touchCloneEl.style.height = rect.height + 'px';
+            touchCloneEl.style.zIndex = '99999';
+            touchCloneEl.style.pointerEvents = 'none';
+            touchCloneEl.style.opacity = '0.9';
+            touchCloneEl.style.transform = 'scale(1.08)';
+            touchCloneEl.style.boxShadow = '0 16px 36px rgba(0,0,0,0.6), 0 0 20px var(--cyan-glow)';
+            touchCloneEl.style.borderColor = 'var(--cyan)';
+            document.body.appendChild(touchCloneEl);
+        }, 300);
+    }
+
+    function handleCatTouchMove(e) {
+        if (!touchDraggingCat) {
+            // Si el usuario mueve el dedo antes de que se cumpla el long-press, cancelamos para permitir scroll normal
+            clearTimeout(touchLongPressTimer);
+            return;
+        }
+
+        // Si ya está activo el arrastre táctil, bloqueamos el scroll
+        e.preventDefault();
+        touchMoved = true;
+        const touch = e.touches[0];
+
+        if (touchCloneEl) {
+            touchCloneEl.style.left = (touch.clientX - touchOffsetX) + 'px';
+            touchCloneEl.style.top = (touch.clientY - touchOffsetY) + 'px';
+        }
+
+        // Detectar nodo bajo el dedo
+        document.querySelectorAll('.cat-node').forEach(n => n.classList.remove('cat-drag-over'));
+        const elUnder = document.elementFromPoint(touch.clientX, touch.clientY);
+        const targetNode = elUnder ? elUnder.closest('.cat-node') : null;
+        if (targetNode && targetNode.dataset.cat !== touchDraggingCat) {
+            targetNode.classList.add('cat-drag-over');
+        }
+    }
+
+    function handleCatTouchEnd(e) {
+        clearTimeout(touchLongPressTimer);
+
+        if (touchCloneEl) {
+            touchCloneEl.remove();
+            touchCloneEl = null;
+        }
+
+        if (touchDraggingCat) {
+            e.preventDefault();
+            suppressClickUntil = Date.now() + 400; // Evitar abrir la categoría al soltar
+
+            const touch = e.changedTouches[0];
+            const elUnder = document.elementFromPoint(touch.clientX, touch.clientY);
+            const targetNode = elUnder ? elUnder.closest('.cat-node') : null;
+
+            if (targetNode && targetNode.dataset.cat && targetNode.dataset.cat !== touchDraggingCat) {
+                reorderCategories(touchDraggingCat, targetNode.dataset.cat);
+            }
+
+            document.querySelectorAll('.cat-node').forEach(n => {
+                n.classList.remove('cat-dragging', 'cat-drag-over');
+            });
+            touchDraggingCat = null;
+        }
+    }
+
+    async function reorderCategories(fromCat, toCat) {
+        const allKeys = Object.keys(data || {});
+        let currentOrder = Array.isArray(userConfig.cat_order) && userConfig.cat_order.length > 0
+            ? userConfig.cat_order.filter(c => allKeys.includes(c))
+            : [...allKeys];
+
+        allKeys.forEach(k => {
+            if (!currentOrder.includes(k)) currentOrder.push(k);
+        });
+
+        const fromIdx = currentOrder.indexOf(fromCat);
+        const toIdx = currentOrder.indexOf(toCat);
+
+        if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return;
+
+        currentOrder.splice(fromIdx, 1);
+        currentOrder.splice(toIdx, 0, fromCat);
+
+        userConfig.cat_order = currentOrder;
+        renderAll();
+        saveConfigToSupabase();
     }
 
     function renderHistory() {
@@ -3153,18 +3389,18 @@ end $$;</div>
         if (t === 'history') {
             renderHistory(); 
         }
-        if (t === 'gemini') {
-            if (window.GeminiAssistant && typeof window.GeminiAssistant.onOpenView === 'function') {
-                window.GeminiAssistant.onOpenView();
-            }
-        }
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function openGeminiTab() {
-        const tabBtn = document.getElementById('tabGeminiBtn');
-        switchTab('gemini', tabBtn);
         hideModals();
+        const modal = document.getElementById('geminiModal');
+        if (modal) {
+            modal.style.display = 'flex';
+            if (window.GeminiAssistant && typeof window.GeminiAssistant.onOpenView === 'function') {
+                window.GeminiAssistant.onOpenView();
+            }
+        }
     }
 
     function openDetail(cat) { 
