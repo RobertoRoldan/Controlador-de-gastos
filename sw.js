@@ -1,10 +1,12 @@
-const CACHE_NAME = 'finanzas-roldan-v15-multiusuario';
+const CACHE_NAME = 'finanzas-roldan-v17-gemini-autodiscovery';
 const ASSETS_TO_CACHE = [
   './',
   'index.html',
   'manifest.json',
+  'gemini.js',
   'https://cdn.jsdelivr.net/npm/chart.js',
-  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
+  'https://cdn.jsdelivr.net/npm/marked/marked.min.js'
 ];
 
 self.addEventListener('install', (event) => {
@@ -30,8 +32,8 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   
-  // No cachear llamadas a la API de Supabase para tener siempre datos frescos
-  if (event.request.url.includes('supabase.co')) {
+  // No cachear llamadas a APIs dinámicas externas (Supabase y Gemini) para tener siempre respuestas en tiempo real
+  if (event.request.url.includes('supabase.co') || event.request.url.includes('generativelanguage.googleapis.com')) {
     return;
   }
 

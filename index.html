@@ -29,6 +29,9 @@
     <!-- Chart.js para Estadísticas -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+    <!-- Marked para renderizado Markdown de respuestas IA -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
     <!-- Google Fonts: Inter & JetBrains Mono -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -924,6 +927,335 @@
             opacity: 1;
             transform: translateX(-50%) translateY(0);
         }
+
+        /* =========================================================
+           ESTILOS ASISTENTE GOOGLE GEMINI IA
+           ========================================================= */
+        @media (max-width: 420px) {
+            .tab-btn {
+                font-size: 0.58rem !important;
+                padding: 12px 2px !important;
+                letter-spacing: 0.5px !important;
+            }
+        }
+
+        .gemini-status-badge {
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            letter-spacing: 0.5px;
+        }
+        .gemini-status-badge.key-active {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--green);
+            border: 1px solid rgba(16, 185, 129, 0.35);
+        }
+        .gemini-status-badge.key-missing {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--orange);
+            border: 1px solid rgba(245, 158, 11, 0.35);
+        }
+
+        .btn-gemini-mini {
+            background: rgba(168, 85, 247, 0.18);
+            border: 1px solid rgba(168, 85, 247, 0.4);
+            color: #d8b4fe;
+            padding: 5px 12px;
+            border-radius: 18px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s var(--ease-spring);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .btn-gemini-mini:hover {
+            background: rgba(168, 85, 247, 0.32);
+            border-color: var(--purple);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px var(--purple-glow);
+        }
+
+        .gemini-chip-container {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 4px 2px 10px 2px;
+            margin-bottom: 12px;
+            scrollbar-width: thin;
+            -webkit-overflow-scrolling: touch;
+        }
+        .gemini-chip {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border);
+            color: #cbd5e1;
+            padding: 7px 13px;
+            border-radius: 20px;
+            font-size: 0.74rem;
+            font-weight: 600;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.2s var(--ease-spring);
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            flex-shrink: 0;
+        }
+        .gemini-chip:hover {
+            background: rgba(168, 85, 247, 0.16);
+            border-color: var(--purple);
+            color: #ffffff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px var(--purple-glow);
+        }
+
+        .gemini-chat-container {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            margin-bottom: 14px;
+            min-height: 120px;
+        }
+
+        .gemini-welcome-card {
+            background: rgba(18, 24, 38, 0.8);
+            border: 1px solid rgba(168, 85, 247, 0.25);
+            border-radius: 18px;
+            padding: 18px;
+            backdrop-filter: blur(14px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            animation: viewFadeSlide 0.3s var(--ease-spring);
+        }
+
+        .gemini-msg {
+            padding: 16px 18px;
+            border-radius: 18px;
+            max-width: 100%;
+            position: relative;
+            line-height: 1.6;
+            font-size: 0.90rem;
+            animation: geminiMsgSlide 0.25s var(--ease-spring);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+        }
+        @keyframes geminiMsgSlide {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .gemini-msg-user {
+            background: rgba(6, 182, 212, 0.09);
+            border: 1px solid rgba(6, 182, 212, 0.35);
+            color: #ffffff;
+            align-self: flex-end;
+            max-width: 90%;
+            border-bottom-right-radius: 4px;
+        }
+        .gemini-msg-gemini {
+            background: rgba(18, 24, 38, 0.92);
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            color: #f1f5f9;
+            align-self: flex-start;
+            width: 100%;
+            border-bottom-left-radius: 4px;
+        }
+
+        .gemini-msg-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 14px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            font-size: 0.72rem;
+            color: var(--text-dark);
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .btn-gemini-action {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.72rem;
+            padding: 4px 10px;
+            border-radius: 8px;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .btn-gemini-action:hover {
+            color: var(--cyan);
+            border-color: var(--cyan);
+            background: rgba(6, 182, 212, 0.12);
+        }
+
+        .gemini-msg-content h1, .gemini-msg-content h2, .gemini-msg-content h3 {
+            color: var(--cyan);
+            margin: 12px 0 6px 0;
+            font-size: 1.05rem;
+            font-weight: 800;
+        }
+        .gemini-msg-content ul, .gemini-msg-content ol {
+            margin: 8px 0 8px 20px;
+        }
+        .gemini-msg-content li {
+            margin-bottom: 4px;
+        }
+        .gemini-msg-content strong {
+            color: #ffffff;
+            font-weight: 700;
+        }
+        .gemini-msg-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0;
+            font-size: 0.82rem;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .gemini-msg-content th {
+            background: rgba(168, 85, 247, 0.18);
+            color: #e9d5ff;
+            font-weight: 700;
+            padding: 8px 10px;
+            border: 1px solid var(--border);
+            text-align: left;
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+        }
+        .gemini-msg-content td {
+            padding: 8px 10px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            color: var(--text);
+        }
+        .gemini-msg-content tr:nth-child(even) {
+            background: rgba(255, 255, 255, 0.02);
+        }
+        .gemini-msg-content tr:hover {
+            background: rgba(6, 182, 212, 0.06);
+        }
+        .gemini-msg-content code {
+            font-family: var(--font-mono);
+            background: rgba(0, 0, 0, 0.45);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            color: var(--cyan);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .gemini-msg-content pre {
+            background: #080c14;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        .gemini-msg-content blockquote {
+            border-left: 3px solid var(--purple);
+            padding-left: 10px;
+            margin: 8px 0;
+            color: var(--text-muted);
+            background: rgba(168, 85, 247, 0.05);
+            border-radius: 0 6px 6px 0;
+        }
+
+        .gemini-loading {
+            display: none;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 18px;
+            background: rgba(18, 24, 38, 0.9);
+            border: 1px solid var(--purple);
+            border-radius: 16px;
+            box-shadow: 0 0 18px var(--purple-glow);
+            animation: geminiPulseGlow 2s infinite ease-in-out;
+            margin-bottom: 14px;
+        }
+        @keyframes geminiPulseGlow {
+            0%, 100% { box-shadow: 0 0 10px var(--purple-glow); }
+            50% { box-shadow: 0 0 24px rgba(168, 85, 247, 0.6); }
+        }
+        .gemini-spinner {
+            width: 22px;
+            height: 22px;
+            border: 3px solid rgba(168, 85, 247, 0.3);
+            border-top-color: var(--purple);
+            border-radius: 50%;
+            animation: geminiSpin 0.8s linear infinite;
+            flex-shrink: 0;
+        }
+        @keyframes geminiSpin {
+            to { transform: rotate(360deg); }
+        }
+
+        .gemini-input-card {
+            background: rgba(13, 18, 28, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 8px 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+            margin-top: 14px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .gemini-input-card:focus-within {
+            border-color: var(--purple);
+            box-shadow: 0 0 0 2px var(--purple-glow);
+        }
+        .gemini-input-row {
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+        }
+        .gemini-textarea {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            resize: none;
+            font-family: var(--font-main);
+            font-size: 0.92rem;
+            line-height: 1.4;
+            max-height: 120px;
+            min-height: 42px;
+            padding: 10px 4px;
+            outline: none;
+            margin-bottom: 0;
+        }
+        .gemini-textarea::placeholder {
+            color: var(--text-dark);
+        }
+        .btn-gemini-send {
+            background: linear-gradient(135deg, var(--purple), #7c3aed);
+            color: #ffffff;
+            border: none;
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s var(--ease-spring);
+            flex-shrink: 0;
+            margin-bottom: 2px;
+        }
+        .btn-gemini-send:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 14px var(--purple-glow);
+        }
+        .btn-gemini-send:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+        }
     </style>
 </head>
 <body>
@@ -970,9 +1302,14 @@
             <span class="user-email-text" id="topUserEmail">usuario@correo.com</span>
             <span class="sync-badge" id="syncStatusBadge">⚡ En tiempo real</span>
         </div>
-        <button class="btn-signout-mini" onclick="signOutUser()" title="Cerrar Sesión">
-            Cerrar Sesión
-        </button>
+        <div style="display:flex; gap:6px; align-items:center;">
+            <button class="btn-gemini-mini" onclick="openGeminiTab()" title="Consultar a Gemini IA">
+                <span>✨</span> IA
+            </button>
+            <button class="btn-signout-mini" onclick="signOutUser()" title="Cerrar Sesión">
+                Cerrar Sesión
+            </button>
+        </div>
     </div>
 
     <!-- BANNER DE AVISO SI FALTA LA TABLA EN SUPABASE -->
@@ -1038,6 +1375,128 @@
                 <canvas id="statsChart"></canvas>
             </div>
             <div id="statsPeriodTotal" class="total-label" style="font-size: 2.2rem; text-align:center; margin-top:16px;">0.00€</div>
+        </div>
+    </div>
+
+    <!-- PESTAÑA GEMINI: ASISTENTE FINANCIERO IA -->
+    <div id="geminiView" class="view">
+        <!-- Cabecera del Asistente -->
+        <div class="glass-card" style="margin-bottom:12px; position:relative; overflow:hidden;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:1.4rem;">✨</span>
+                        <h2 style="font-size:1.25rem; font-weight:900; background:linear-gradient(135deg, #a855f7, #06b6d4); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin:0;">
+                            Asistente Gemini IA
+                        </h2>
+                    </div>
+                    <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
+                        Consultas con cálculo exacto basadas en tus gastos reales
+                    </div>
+                </div>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <span id="geminiKeyStatusBadge" class="gemini-status-badge key-missing">
+                        ⚠️ Sin Clave API
+                    </span>
+                    <button class="btn-outline" style="width:auto; padding:5px 11px; font-size:0.72rem; border-color:var(--purple); color:var(--purple);" onclick="GeminiAssistant.toggleInlineKeyCard()" title="Configurar clave API">
+                        🔑 Clave API
+                    </button>
+                    <button class="btn-outline" style="width:auto; padding:5px 11px; font-size:0.72rem; border-color:var(--border);" onclick="GeminiAssistant.clearChat()" title="Limpiar conversación">
+                        🗑️ Limpiar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tarjeta Desplegable para Configuración Rápida de Clave API -->
+        <div id="geminiInlineKeyCard" class="glass-card" style="display:none; border-color:rgba(168,85,247,0.4); background:rgba(18,24,38,0.95); margin-bottom:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <h4 style="margin:0; color:var(--cyan); font-size:0.9rem;">Configurar Clave API de Google Gemini</h4>
+                <button class="btn-gemini-action" onclick="GeminiAssistant.toggleInlineKeyCard()">✕</button>
+            </div>
+            <p style="font-size:0.76rem; color:var(--text-muted); margin-bottom:10px; line-height:1.4;">
+                Tu clave se guarda exclusivamente en tu navegador (<code>localStorage</code>) y nunca queda expuesta en GitHub ni en código público.
+            </p>
+            <div style="display:flex; gap:8px; margin-bottom:8px;">
+                <input type="password" id="geminiInlineKeyInput" placeholder="Pega tu API Key de Gemini (AIzaSy...)" style="margin-bottom:0;">
+                <button class="btn-outline" style="width:auto; padding:0 12px;" type="button" onclick="GeminiAssistant.toggleKeyVisibility('geminiInlineKeyInput', this)">👁️</button>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                <button class="btn-primary" style="flex:1; padding:10px 14px; font-size:0.8rem; background:var(--purple); min-width:140px;" onclick="GeminiAssistant.saveKeyFromInline()">
+                    💾 VERIFICAR Y GUARDAR
+                </button>
+                <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" class="btn-outline" style="flex:1; padding:10px 14px; font-size:0.8rem; text-align:center; text-decoration:none; display:inline-block; border-color:var(--cyan); color:var(--cyan); min-width:140px;">
+                    ↗ Obtener clave gratis
+                </a>
+            </div>
+            <div id="geminiInlineKeyStatus" style="font-size:0.75rem; margin-top:8px;"></div>
+        </div>
+
+        <!-- Selector de Alcance y Filtro de Contexto -->
+        <div class="glass-card" style="padding:12px 16px; margin-bottom:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:4px;">
+                <span style="font-size:0.70rem; color:var(--text-muted); font-weight:800; text-transform:uppercase; letter-spacing:0.8px;">
+                    🎯 Datos incluidos en la consulta:
+                </span>
+                <span id="geminiContextBadge" style="font-size:0.72rem; color:var(--cyan); font-family:var(--font-mono); font-weight:700;">
+                    📊 Calculando...
+                </span>
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                <select id="geminiScopePeriod" onchange="GeminiAssistant.updateContextStats()" style="margin-bottom:0; font-size:0.82rem; padding:10px 12px;">
+                    <option value="all" selected>Todo el historial</option>
+                    <option value="this_month">Este mes en curso</option>
+                    <option value="last_30_days">Últimos 30 días</option>
+                    <option value="this_year">Este año</option>
+                    <option value="last_month">Mes anterior</option>
+                </select>
+                <select id="geminiScopeCategory" onchange="GeminiAssistant.updateContextStats()" style="margin-bottom:0; font-size:0.82rem; padding:10px 12px;">
+                    <option value="all" selected>Todas las categorías</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Píldoras de Sugerencias de Consulta Rápida -->
+        <div class="gemini-chip-container">
+            <button class="gemini-chip" onclick="GeminiAssistant.askSuggestion('¿Cuánto he gastado este mes y en qué categorías principales?')">
+                <span>📅</span> ¿Gasto de este mes?
+            </button>
+            <button class="gemini-chip" onclick="GeminiAssistant.askSuggestion('Hazme una tabla con el desglose de gastos por categoría y porcentaje del total.')">
+                <span>📊</span> Desglose en tabla (%)
+            </button>
+            <button class="gemini-chip" onclick="GeminiAssistant.askSuggestion('¿Cuál ha sido mi mayor gasto individual y en qué fecha se realizó?')">
+                <span>🔝</span> Mayor gasto registrado
+            </button>
+            <button class="gemini-chip" onclick="GeminiAssistant.askSuggestion('¿Cuántas horas de trabajo representan mis gastos de acuerdo con mi salario hora?')">
+                <span>⏳</span> Equivalencia en horas de vida
+            </button>
+            <button class="gemini-chip" onclick="GeminiAssistant.askSuggestion('Compara el gasto de mis tres principales categorías y dime qué conclusiones exactas se observan.')">
+                <span>🔍</span> Comparativa de categorías
+            </button>
+        </div>
+
+        <!-- Contenedor del Chat / Respuestas -->
+        <div id="geminiChatMessages" class="gemini-chat-container"></div>
+
+        <!-- Indicador de Carga Animado -->
+        <div id="geminiLoadingIndicator" class="gemini-loading">
+            <div class="gemini-spinner"></div>
+            <div>
+                <strong style="color:var(--text); font-size:0.86rem; display:block;">Gemini analizando tus transacciones...</strong>
+                <span style="font-size:0.75rem; color:var(--text-muted);">Calculando sumas, porcentajes y desgloses exactos sin alucinaciones.</span>
+            </div>
+        </div>
+
+        <!-- Input de Pregunta y Botón de Envío -->
+        <div class="gemini-input-card">
+            <div class="gemini-input-row">
+                <textarea id="geminiQuestionInput" class="gemini-textarea" rows="1" placeholder="Pregunta sobre tus gastos (ej: ¿Cuánto gasté en comida este mes?)..."></textarea>
+                <button id="geminiSendBtn" class="btn-gemini-send" onclick="GeminiAssistant.submitQuery()" title="Enviar a Gemini">
+                    <svg viewBox="0 0 24 24" fill="#fff" width="20" height="20">
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                    </svg>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -1138,6 +1597,60 @@
                 </div>
             </details>
         </div>
+
+        <!-- 7. Integración Google Gemini AI -->
+        <div class="glass-card">
+            <details id="geminiSettingsDetails">
+                <summary style="color:var(--purple); display:flex; align-items:center; gap:8px;">
+                    <span>✨</span> Google Gemini API (Consultas Inteligentes)
+                </summary>
+                <div style="padding-top:12px; font-size:0.85rem;">
+                    <p style="color:var(--text-muted); font-size:0.8rem; margin-bottom:12px; line-height:1.5;">
+                        Permite realizar consultas en lenguaje natural (ej: <em>"¿Cuánto gasté en comida este mes?"</em>, <em>"Desglose por categoría"</em>) basadas <strong>estrictamente en tus datos reales sin alucinaciones</strong>.
+                    </p>
+                    
+                    <div style="margin-bottom:12px;">
+                        <label style="font-size:0.75rem; color:var(--text-muted); font-weight:700; display:block; margin-bottom:6px;">CLAVE API DE GOOGLE GEMINI:</label>
+                        <div style="display:flex; gap:8px;">
+                            <input type="password" id="geminiApiKeyInput" placeholder="Pega tu clave API (AIzaSy...)" style="margin-bottom:0;">
+                            <button class="btn-outline" style="width:auto; padding:0 14px;" type="button" onclick="GeminiAssistant.toggleKeyVisibility('geminiApiKeyInput', this)" title="Mostrar / Ocultar clave">👁️</button>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom:14px;">
+                        <label style="font-size:0.75rem; color:var(--text-muted); font-weight:700; display:block; margin-bottom:6px;">MODELO DE GEMINI:</label>
+                        <select id="geminiModelSelector" style="margin-bottom:0;">
+                            <option value="auto" selected>✨ Detección automática del mejor modelo (Recomendado)</option>
+                            <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash-Lite (Vigente / Ultrarrápido)</option>
+                            <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite</option>
+                            <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                            <option value="gemini-1.5-flash">Gemini 1.5 Flash (Alta compatibilidad)</option>
+                        </select>
+                    </div>
+
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+                        <button class="btn-primary" style="flex:2; background:var(--purple); min-width:140px;" onclick="GeminiAssistant.saveKeyFromSettings()">
+                            💾 GUARDAR CONFIGURACIÓN
+                        </button>
+                        <button class="btn-outline" style="flex:1; border-color:var(--cyan); color:var(--cyan); min-width:130px;" onclick="GeminiAssistant.testApiKeyFromSettings()">
+                            ⚡ PROBAR CONEXIÓN
+                        </button>
+                        <button class="btn-outline" style="flex:1; border-color:var(--red); color:var(--red); min-width:100px;" onclick="GeminiAssistant.removeKeyFromSettings()">
+                            🗑️ BORRAR
+                        </button>
+                    </div>
+
+                    <div id="geminiSettingsStatus" style="font-size:0.8rem; margin-top:8px;"></div>
+
+                    <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:12px; padding:12px; margin-top:14px; font-size:0.76rem; color:var(--text-muted); line-height:1.5;">
+                        <strong style="color:var(--text);">🔒 Seguridad & Repositorio GitHub:</strong><br>
+                        • Tu clave se almacena localmente en tu navegador (<code>localStorage</code>) y, si estás autenticado, se sincroniza de forma segura en tu registro privado de Supabase con RLS.<br>
+                        • <strong>Nunca</strong> queda escrita en el código subido al repositorio ni en archivos públicos.<br>
+                        • Consigue una clave gratuita en <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" style="color:var(--cyan); text-decoration:underline;">Google AI Studio</a>.
+                    </div>
+                </div>
+            </details>
+        </div>
     </div>
 </div>
 
@@ -1148,6 +1661,7 @@
     <button class="tab-btn active" onclick="switchTab('cats', this)">CATEGORÍAS</button>
     <button class="tab-btn" onclick="switchTab('history', this)">HISTORIAL</button>
     <button class="tab-btn" onclick="switchTab('stats', this)">ESTADÍSTICAS</button>
+    <button class="tab-btn" id="tabGeminiBtn" onclick="switchTab('gemini', this)">✨ GEMINI IA</button>
     <button class="tab-btn" onclick="switchTab('settings', this)">AJUSTES</button>
 </div>
 
@@ -1161,6 +1675,7 @@
         </svg>
     </button>
     <div class="fab-sub" style="border-color:var(--cyan)" onclick="showQuickAddModal()" title="Añadir Rápido">⚡</div>
+    <div class="fab-sub" style="border-color:var(--purple); box-shadow:0 0 12px var(--purple-glow); font-size:1.15rem;" onclick="openGeminiTab()" title="Consultar Gemini IA">✨</div>
     <div class="fab-sub" style="border-color:var(--green)" onclick="showAddModal()" title="Nueva Categoría">
         <svg viewBox="0 0 24 24" fill="var(--green)" width="22" height="22">
             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/>
@@ -1495,6 +2010,18 @@ end $$;</div>
         auto_rules: [],
         auto_model: {},
         last_recurrent_check: ""
+    };
+
+    // Exponer datos y métodos del sistema de forma modular para Gemini Assistant
+    window.getAppData = function() {
+        return {
+            data: data,
+            categoriesList: categoriesList,
+            categoriesMeta: categoriesMeta,
+            userConfig: userConfig,
+            currentUser: currentUser,
+            saveConfigToSupabase: saveConfigToSupabase
+        };
     };
 
     let activeCat = null, sChart = null, lChart = null, isPrivacy = false, activeFilter = null;
@@ -2416,6 +2943,9 @@ end $$;</div>
         renderHistory(); 
         renderRepartoConfig(); 
         renderRecurrents();
+        if (window.GeminiAssistant && typeof window.GeminiAssistant.updateContextStats === 'function') {
+            window.GeminiAssistant.updateContextStats();
+        }
     }
 
     function renderHistory() {
@@ -2623,7 +3153,18 @@ end $$;</div>
         if (t === 'history') {
             renderHistory(); 
         }
+        if (t === 'gemini') {
+            if (window.GeminiAssistant && typeof window.GeminiAssistant.onOpenView === 'function') {
+                window.GeminiAssistant.onOpenView();
+            }
+        }
         window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function openGeminiTab() {
+        const tabBtn = document.getElementById('tabGeminiBtn');
+        switchTab('gemini', tabBtn);
+        hideModals();
     }
 
     function openDetail(cat) { 
@@ -3533,6 +4074,9 @@ end $$;</div>
         }
     });
 </script>
+
+<!-- Módulo Asistente Google Gemini IA (Consultas sobre gastos reales) -->
+<script src="gemini.js"></script>
 
 </body>
 </html>
