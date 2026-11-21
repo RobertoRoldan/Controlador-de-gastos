@@ -1,4 +1,4 @@
-const CACHE_NAME = 'finanzas-roldan-v18-fab-gemini-drag-cats';
+const CACHE_NAME = 'finanzas-roldan-v19-swap-drag-touch';
 const ASSETS_TO_CACHE = [
   './',
   'index.html',

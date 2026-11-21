@@ -1264,6 +1264,7 @@
             touch-action: pan-y;
             user-select: none;
             -webkit-user-select: none;
+            -webkit-touch-callout: none;
         }
         .cat-node:active {
             cursor: grabbing;
@@ -1272,6 +1273,7 @@
             opacity: 0.35;
             transform: scale(0.95);
             border-style: dashed !important;
+            touch-action: none;
         }
         .cat-node.cat-drag-over {
             border-color: var(--cyan) !important;
@@ -2996,7 +2998,8 @@ end $$;</div>
                      ontouchstart="handleCatTouchStart(event)"
                      ontouchmove="handleCatTouchMove(event)"
                      ontouchend="handleCatTouchEnd(event)"
-                     ontouchcancel="handleCatTouchCancel(event)">
+                     ontouchcancel="handleCatTouchCancel(event)"
+                     oncontextmenu="return false;">
                     <span class="drag-handle-hint" title="Mantén pulsado y arrastra para reordenar">⠿</span>
                     ${shareBadge}
                     ${roleBadge}
@@ -3037,25 +3040,40 @@ end $$;</div>
     let suppressClickUntil = 0;
     let isReordering = false;
 
+    // Coordenadas capturadas en touchstart (los TouchEvent se vacían después del dispatch)
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchLastX = 0;
+    let touchLastY = 0;
+    const TOUCH_LONG_PRESS_MS = 300;
+    const TOUCH_MOVE_TOLERANCE = 12;
+
     // Limpieza centralizada de TODO estado visual de arrastre
     function cleanupDragState() {
         draggedCatName = null;
         touchDraggingCat = null;
         touchMoved = false;
-        
+
         if (touchLongPressTimer) {
             clearTimeout(touchLongPressTimer);
             touchLongPressTimer = null;
         }
-        
+
         if (touchCloneEl) {
             touchCloneEl.remove();
             touchCloneEl = null;
         }
-        
+
         document.querySelectorAll('.cat-node').forEach(n => {
             n.classList.remove('cat-dragging', 'cat-drag-over');
+            if (n.dataset.wasDraggable === '0') {
+                n.draggable = true;
+                delete n.dataset.wasDraggable;
+            }
         });
+
+        document.body.style.overflow = '';
+        document.body.style.touchAction = '';
     }
 
     // Escape para cancelar arrastre
@@ -3063,9 +3081,15 @@ end $$;</div>
         if (e.key === 'Escape') cleanupDragState();
     });
 
-    // Red de seguridad global: limpiar si el touch se cancela fuera del elemento
+    // Red de seguridad: si el sistema cancela el gesto táctil, limpiamos
     document.addEventListener('touchcancel', cleanupDragState, { passive: true });
-    document.addEventListener('pointerup', cleanupDragState, { passive: true });
+
+    // Bloquea el scroll de la página SOLO mientras se está arrastrando en móvil
+    document.addEventListener('touchmove', (e) => {
+        if (touchDraggingCat) {
+            e.preventDefault();
+        }
+    }, { passive: false });
 
     function handleCatClick(event, cat) {
         if (Date.now() < suppressClickUntil) {
@@ -3080,7 +3104,6 @@ end $$;</div>
     function handleCatDragStart(e) {
         cleanupDragState(); // Limpieza preventiva
         draggedCatName = e.currentTarget.dataset.cat;
-        console.log('[handleCatDragStart] Drag iniciado:', draggedCatName);
         e.currentTarget.classList.add('cat-dragging');
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/plain', draggedCatName);
@@ -3108,18 +3131,13 @@ end $$;</div>
         const targetNode = e.currentTarget;
         targetNode.classList.remove('cat-drag-over');
         const targetCat = targetNode.dataset.cat;
-        
-        console.log('[handleCatDrop] Drop detectado:', { targetCat, draggedCatName });
-        
+
         // Guardar valores antes de limpiar
         const fromCat = draggedCatName;
         cleanupDragState();
-        
+
         if (fromCat && targetCat && fromCat !== targetCat) {
-            console.log('[handleCatDrop] Llamando reorderCategories');
             reorderCategories(fromCat, targetCat);
-        } else {
-            console.warn('[handleCatDrop] No se reordena:', { fromCat, targetCat });
         }
     }
 
@@ -3130,15 +3148,29 @@ end $$;</div>
 
     // Soporte Touch Móvil (Pulsación larga para levantar y mover estilo widget)
     function handleCatTouchStart(e) {
-        // Ignorar si ya hay un arrastre activo
+        // Ignorar si ya hay un arrastre activo o si hay varios dedos
         if (touchDraggingCat || draggedCatName) return;
-        
+        if (e.touches.length !== 1) return;
+
         const node = e.currentTarget;
         const cat = node.dataset.cat;
+        const touch = e.touches[0];
+
+        // Capturamos coordenadas AHORA (el evento se vacía tras el dispatch)
+        touchStartX = touchLastX = touch.clientX;
+        touchStartY = touchLastY = touch.clientY;
         touchMoved = false;
 
+        // Evita que el navegador inicie su propio drag&drop nativo con long-press
+        node.dataset.wasDraggable = '0';
+        node.draggable = false;
+
+        if (touchLongPressTimer) clearTimeout(touchLongPressTimer);
         touchLongPressTimer = setTimeout(() => {
+            touchLongPressTimer = null;
             touchDraggingCat = cat;
+            touchMoved = true;
+            suppressClickUntil = Date.now() + 600;
             node.classList.add('cat-dragging');
 
             if (navigator.vibrate) {
@@ -3146,41 +3178,55 @@ end $$;</div>
             }
 
             const rect = node.getBoundingClientRect();
-            const touch = e.touches[0];
-            touchOffsetX = touch.clientX - rect.left;
-            touchOffsetY = touch.clientY - rect.top;
+            touchOffsetX = touchStartX - rect.left;
+            touchOffsetY = touchStartY - rect.top;
 
             // Crear elemento flotante clonado
             touchCloneEl = node.cloneNode(true);
+            touchCloneEl.classList.remove('cat-dragging', 'cat-drag-over');
             touchCloneEl.style.position = 'fixed';
             touchCloneEl.style.left = rect.left + 'px';
             touchCloneEl.style.top = rect.top + 'px';
             touchCloneEl.style.width = rect.width + 'px';
             touchCloneEl.style.height = rect.height + 'px';
+            touchCloneEl.style.margin = '0';
             touchCloneEl.style.zIndex = '99999';
             touchCloneEl.style.pointerEvents = 'none';
             touchCloneEl.style.opacity = '0.9';
             touchCloneEl.style.transform = 'scale(1.08)';
             touchCloneEl.style.boxShadow = '0 16px 36px rgba(0,0,0,0.6), 0 0 20px var(--cyan-glow)';
             touchCloneEl.style.borderColor = 'var(--cyan)';
-            touchCloneEl.style.transition = 'none'; // Sin animaciones durante el arrastre
+            touchCloneEl.style.transition = 'none';
+            touchCloneEl.draggable = false;
             document.body.appendChild(touchCloneEl);
-            
+
             // Prevenir scroll y selección de texto
             document.body.style.overflow = 'hidden';
             document.body.style.touchAction = 'none';
-        }, 300);
+        }, TOUCH_LONG_PRESS_MS);
     }
 
     function handleCatTouchMove(e) {
+        const touch = e.touches[0];
+        if (!touch) return;
+
+        touchLastX = touch.clientX;
+        touchLastY = touch.clientY;
+
         if (!touchDraggingCat) {
-            clearTimeout(touchLongPressTimer);
+            // Si el dedo se mueve más allá del umbral antes del long-press, dejamos hacer scroll
+            const dx = touch.clientX - touchStartX;
+            const dy = touch.clientY - touchStartY;
+            if (Math.hypot(dx, dy) > TOUCH_MOVE_TOLERANCE) {
+                clearTimeout(touchLongPressTimer);
+                touchLongPressTimer = null;
+            }
             return;
         }
 
+        // Arrastre activo: bloqueamos el scroll y movemos el clon
         e.preventDefault();
         touchMoved = true;
-        const touch = e.touches[0];
 
         if (touchCloneEl) {
             touchCloneEl.style.left = (touch.clientX - touchOffsetX) + 'px';
@@ -3198,91 +3244,92 @@ end $$;</div>
 
     function handleCatTouchEnd(e) {
         const wasDragging = touchDraggingCat;
-        const targetCat = (() => {
-            if (!wasDragging) return null;
-            const touch = e.changedTouches[0];
-            const elUnder = document.elementFromPoint(touch.clientX, touch.clientY);
-            const targetNode = elUnder ? elUnder.closest('.cat-node') : null;
-            return (targetNode && targetNode.dataset.cat && targetNode.dataset.cat !== wasDragging) 
-                ? targetNode.dataset.cat 
-                : null;
-        })();
 
-        console.log('[handleCatTouchEnd] Touch end:', { wasDragging, targetCat });
+        // Ocultar clone para que elementFromPoint dé en el nodo real
+        if (touchCloneEl) touchCloneEl.style.display = 'none';
+
+        let dropX = touchLastX;
+        let dropY = touchLastY;
+        if (e.changedTouches && e.changedTouches[0]) {
+            dropX = e.changedTouches[0].clientX;
+            dropY = e.changedTouches[0].clientY;
+        }
+
+        let targetCat = null;
+        if (wasDragging) {
+            const elUnder = document.elementFromPoint(dropX, dropY);
+            const targetNode = elUnder ? elUnder.closest('.cat-node') : null;
+            if (targetNode && targetNode.dataset.cat && targetNode.dataset.cat !== wasDragging) {
+                targetCat = targetNode.dataset.cat;
+            }
+        }
 
         // LIMPIEZA TOTAL ANTES DE REORDER
         cleanupDragState();
-        document.body.style.overflow = '';
-        document.body.style.touchAction = '';
 
-        if (wasDragging && targetCat) {
-            suppressClickUntil = Date.now() + 400;
-            reorderCategories(wasDragging, targetCat);
-        } else {
-            console.warn('[handleCatTouchEnd] No se reordena:', { wasDragging, targetCat });
+        if (wasDragging) {
+            suppressClickUntil = Date.now() + 600;
+            if (targetCat) {
+                reorderCategories(wasDragging, targetCat);
+            }
         }
     }
 
-    // Touch cancel (llamada entrante, alerta, etc.)
+    // Touch cancel (llamada entrante, alerta, cambio de gesto, etc.)
     function handleCatTouchCancel(e) {
         cleanupDragState();
-        document.body.style.overflow = '';
-        document.body.style.touchAction = '';
     }
 
     async function reorderCategories(fromCat, toCat) {
         if (isReordering) return;
         isReordering = true;
 
-        console.log('[reorderCategories] Iniciando:', { fromCat, toCat });
+        let changed = false;
 
-        const allKeys = Object.keys(data || {});
-        console.log('[reorderCategories] Categorías existentes:', allKeys);
-        
-        let currentOrder = Array.isArray(userConfig.cat_order) && userConfig.cat_order.length > 0
-            ? userConfig.cat_order.filter(c => allKeys.includes(c))
-            : [...allKeys];
+        try {
+            const allKeys = Object.keys(data || {});
 
-        allKeys.forEach(k => {
-            if (!currentOrder.includes(k)) currentOrder.push(k);
-        });
+            let currentOrder = Array.isArray(userConfig.cat_order) && userConfig.cat_order.length > 0
+                ? userConfig.cat_order.filter(c => allKeys.includes(c))
+                : [...allKeys];
 
-        console.log('[reorderCategories] Orden actual antes:', [...currentOrder]);
+            allKeys.forEach(k => {
+                if (!currentOrder.includes(k)) currentOrder.push(k);
+            });
 
-        const fromIdx = currentOrder.indexOf(fromCat);
-        const toIdx = currentOrder.indexOf(toCat);
+            const fromIdx = currentOrder.indexOf(fromCat);
+            const toIdx = currentOrder.indexOf(toCat);
 
-        console.log('[reorderCategories] Índices:', { fromIdx, toIdx });
+            if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) {
+                return;
+            }
 
-        if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) {
-            console.warn('[reorderCategories] Índices inválidos, abortando');
-            isReordering = false;
-            return;
+            // SWAP: intercambio directo de posiciones (origen <-> destino)
+            [currentOrder[fromIdx], currentOrder[toIdx]] = [currentOrder[toIdx], currentOrder[fromIdx]];
+
+            userConfig.cat_order = currentOrder;
+            changed = true;
+
+            // Guardado inmediato local (offline-first)
+            try {
+                localStorage.setItem('userConfig_cat_order', JSON.stringify(currentOrder));
+            } catch (_) {}
+        } finally {
+            // Refrescar la vista en el siguiente frame (tras cerrar el gesto de arrastre)
+            requestAnimationFrame(() => {
+                if (changed) renderAll();
+                isReordering = false;
+            });
         }
 
-        currentOrder.splice(fromIdx, 1);
-        currentOrder.splice(toIdx, 0, fromCat);
+        if (!changed) return;
 
-        console.log('[reorderCategories] Orden nuevo:', [...currentOrder]);
-
-        userConfig.cat_order = currentOrder;
-        
-        // Guardar en localStorage como respaldo inmediato (offline-first)
-        try {
-            localStorage.setItem('userConfig_cat_order', JSON.stringify(currentOrder));
-        } catch (_) {}
-
+        // Sincronizar con la nube sin bloquear la UI
         try {
             await saveConfigToSupabase();
         } catch (err) {
             console.error('[reorderCategories] Error guardando en Supabase:', err);
         }
-        
-        requestAnimationFrame(() => {
-            console.log('[reorderCategories] Llamando renderAll...');
-            renderAll();
-            isReordering = false;
-        });
     }
 
     function renderHistory() {
