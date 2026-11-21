@@ -2268,6 +2268,17 @@ end $$;</div>
                 } catch (legacyErr) {}
             }
 
+            // Fallback localStorage para cat_order (offline-first)
+            try {
+                const savedOrder = localStorage.getItem('userConfig_cat_order');
+                if (savedOrder) {
+                    const parsed = JSON.parse(savedOrder);
+                    if (Array.isArray(parsed)) {
+                        userConfig.cat_order = parsed;
+                    }
+                }
+            } catch (_) {}
+
             // Si es un usuario nuevo y no tiene ninguna categoría: crear categorías básicas
             if ((!catRows || catRows.length === 0) && !silent) {
                 const defaults = ["Supermercado", "Alquiler", "Transporte", "Ocio"];
@@ -3069,6 +3080,7 @@ end $$;</div>
     function handleCatDragStart(e) {
         cleanupDragState(); // Limpieza preventiva
         draggedCatName = e.currentTarget.dataset.cat;
+        console.log('[handleCatDragStart] Drag iniciado:', draggedCatName);
         e.currentTarget.classList.add('cat-dragging');
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/plain', draggedCatName);
@@ -3097,12 +3109,17 @@ end $$;</div>
         targetNode.classList.remove('cat-drag-over');
         const targetCat = targetNode.dataset.cat;
         
+        console.log('[handleCatDrop] Drop detectado:', { targetCat, draggedCatName });
+        
         // Guardar valores antes de limpiar
         const fromCat = draggedCatName;
         cleanupDragState();
         
         if (fromCat && targetCat && fromCat !== targetCat) {
+            console.log('[handleCatDrop] Llamando reorderCategories');
             reorderCategories(fromCat, targetCat);
+        } else {
+            console.warn('[handleCatDrop] No se reordena:', { fromCat, targetCat });
         }
     }
 
@@ -3191,6 +3208,8 @@ end $$;</div>
                 : null;
         })();
 
+        console.log('[handleCatTouchEnd] Touch end:', { wasDragging, targetCat });
+
         // LIMPIEZA TOTAL ANTES DE REORDER
         cleanupDragState();
         document.body.style.overflow = '';
@@ -3199,6 +3218,8 @@ end $$;</div>
         if (wasDragging && targetCat) {
             suppressClickUntil = Date.now() + 400;
             reorderCategories(wasDragging, targetCat);
+        } else {
+            console.warn('[handleCatTouchEnd] No se reordena:', { wasDragging, targetCat });
         }
     }
 
@@ -3213,7 +3234,11 @@ end $$;</div>
         if (isReordering) return;
         isReordering = true;
 
+        console.log('[reorderCategories] Iniciando:', { fromCat, toCat });
+
         const allKeys = Object.keys(data || {});
+        console.log('[reorderCategories] Categorías existentes:', allKeys);
+        
         let currentOrder = Array.isArray(userConfig.cat_order) && userConfig.cat_order.length > 0
             ? userConfig.cat_order.filter(c => allKeys.includes(c))
             : [...allKeys];
@@ -3222,10 +3247,15 @@ end $$;</div>
             if (!currentOrder.includes(k)) currentOrder.push(k);
         });
 
+        console.log('[reorderCategories] Orden actual antes:', [...currentOrder]);
+
         const fromIdx = currentOrder.indexOf(fromCat);
         const toIdx = currentOrder.indexOf(toCat);
 
+        console.log('[reorderCategories] Índices:', { fromIdx, toIdx });
+
         if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) {
+            console.warn('[reorderCategories] Índices inválidos, abortando');
             isReordering = false;
             return;
         }
@@ -3233,9 +3263,23 @@ end $$;</div>
         currentOrder.splice(fromIdx, 1);
         currentOrder.splice(toIdx, 0, fromCat);
 
+        console.log('[reorderCategories] Orden nuevo:', [...currentOrder]);
+
         userConfig.cat_order = currentOrder;
-        saveConfigToSupabase();
+        
+        // Guardar en localStorage como respaldo inmediato (offline-first)
+        try {
+            localStorage.setItem('userConfig_cat_order', JSON.stringify(currentOrder));
+        } catch (_) {}
+
+        try {
+            await saveConfigToSupabase();
+        } catch (err) {
+            console.error('[reorderCategories] Error guardando en Supabase:', err);
+        }
+        
         requestAnimationFrame(() => {
+            console.log('[reorderCategories] Llamando renderAll...');
             renderAll();
             isReordering = false;
         });
