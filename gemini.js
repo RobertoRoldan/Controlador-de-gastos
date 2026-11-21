@@ -877,7 +877,7 @@ ${userQuestion}`;
         const count = dataContext.metadata.total_movimientos_analizados;
         const totalGastos = dataContext.totales_exactos_verificados.total_gastos_eur;
 
-        badge.innerHTML = `📊 <strong>${count}</strong> movimientos (${totalGastos.toFixed(2)}€ gastos)`;
+        badge.innerHTML = `${count} mov · ${totalGastos.toFixed(2)} €`;
     }
 
     /**
@@ -895,7 +895,7 @@ ${userQuestion}`;
                 statusBadge.title = 'Clave API de Gemini configurada localmente';
             } else {
                 statusBadge.className = 'gemini-status-badge key-missing';
-                statusBadge.innerHTML = '⚠️ Sin Clave API';
+                statusBadge.innerHTML = 'Sin clave';
                 statusBadge.title = 'Configura tu clave para consultar a Gemini';
             }
         }
@@ -1143,7 +1143,7 @@ ${userQuestion}`;
 
         const isUser = sender === 'user';
         const avatar = isUser ? '👤' : '✨';
-        const name = isUser ? 'Tú' : 'Gemini Financiero';
+        const name = isUser ? 'Tú' : 'Asistente IA';
         const timeStr = new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit' }).format(new Date());
 
         const htmlContent = isUser ? escapeHtml(text).replace(/\n/g, '<br>') : renderMarkdownToHtml(text);
@@ -1247,32 +1247,8 @@ ${userQuestion}`;
         if (!chatContainer) return;
 
         const welcomeDiv = document.createElement('div');
-        welcomeDiv.className = 'gemini-welcome-card';
-        welcomeDiv.innerHTML = `
-            <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
-                <div style="background:rgba(168,85,247,0.2); width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.4rem; border:1px solid rgba(168,85,247,0.3);">
-                    ✨
-                </div>
-                <div>
-                    <h4 style="margin:0; font-size:1rem; color:#ffffff; font-weight:800;">Consultas Financieras con Gemini</h4>
-                    <p style="margin:2px 0 0 0; font-size:0.75rem; color:var(--text-muted);">
-                        Cálculos exactos basados estrictamente en tus datos reales, sin alucinaciones.
-                    </p>
-                </div>
-            </div>
-            <div style="font-size:0.8rem; color:var(--text); line-height:1.5; margin-bottom:12px;">
-                Puedes preguntarme en lenguaje natural sobre:
-                <ul style="margin:6px 0 6px 18px; color:var(--text-muted); font-size:0.78rem;">
-                    <li><strong>Totales y medias:</strong> <em>"¿Cuánto he gastado este mes en Supermercado?"</em></li>
-                    <li><strong>Desgloses y tablas:</strong> <em>"Muéstrame una tabla con el porcentaje de gasto por categoría."</em></li>
-                    <li><strong>Récords y mayores gastos:</strong> <em>"¿Cuál ha sido mi compra más cara y cuándo fue?"</em></li>
-                    <li><strong>Equivalencia en tiempo:</strong> <em>"¿Cuántas horas de trabajo representan mis gastos de ocio?"</em></li>
-                </ul>
-            </div>
-            <div style="font-size:0.72rem; color:var(--cyan); font-weight:700;">
-                💡 Selecciona el período arriba o usa una de las píldoras de consulta rápida para empezar:
-            </div>
-        `;
+        welcomeDiv.className = 'gemini-welcome-line';
+        welcomeDiv.textContent = 'Pregunta lo que quieras sobre tus gastos.';
         chatContainer.appendChild(welcomeDiv);
     }
 
