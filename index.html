@@ -3023,6 +3023,7 @@ end $$;</div>
     let touchOffsetY = 0;
     let touchMoved = false;
     let suppressClickUntil = 0;
+    let isReordering = false;
 
     function handleCatClick(event, cat) {
         if (Date.now() < suppressClickUntil) {
@@ -3162,6 +3163,9 @@ end $$;</div>
     }
 
     async function reorderCategories(fromCat, toCat) {
+        if (isReordering) return;
+        isReordering = true;
+
         const allKeys = Object.keys(data || {});
         let currentOrder = Array.isArray(userConfig.cat_order) && userConfig.cat_order.length > 0
             ? userConfig.cat_order.filter(c => allKeys.includes(c))
@@ -3174,14 +3178,20 @@ end $$;</div>
         const fromIdx = currentOrder.indexOf(fromCat);
         const toIdx = currentOrder.indexOf(toCat);
 
-        if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return;
+        if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) {
+            isReordering = false;
+            return;
+        }
 
         currentOrder.splice(fromIdx, 1);
         currentOrder.splice(toIdx, 0, fromCat);
 
         userConfig.cat_order = currentOrder;
-        renderAll();
         saveConfigToSupabase();
+        requestAnimationFrame(() => {
+            renderAll();
+            isReordering = false;
+        });
     }
 
     function renderHistory() {
