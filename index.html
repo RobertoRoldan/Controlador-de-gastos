@@ -2984,7 +2984,8 @@ end $$;</div>
                      ondragend="handleCatDragEnd(event)"
                      ontouchstart="handleCatTouchStart(event)"
                      ontouchmove="handleCatTouchMove(event)"
-                     ontouchend="handleCatTouchEnd(event)">
+                     ontouchend="handleCatTouchEnd(event)"
+                     ontouchcancel="handleCatTouchCancel(event)">
                     <span class="drag-handle-hint" title="Mantén pulsado y arrastra para reordenar">⠿</span>
                     ${shareBadge}
                     ${roleBadge}
@@ -3025,6 +3026,36 @@ end $$;</div>
     let suppressClickUntil = 0;
     let isReordering = false;
 
+    // Limpieza centralizada de TODO estado visual de arrastre
+    function cleanupDragState() {
+        draggedCatName = null;
+        touchDraggingCat = null;
+        touchMoved = false;
+        
+        if (touchLongPressTimer) {
+            clearTimeout(touchLongPressTimer);
+            touchLongPressTimer = null;
+        }
+        
+        if (touchCloneEl) {
+            touchCloneEl.remove();
+            touchCloneEl = null;
+        }
+        
+        document.querySelectorAll('.cat-node').forEach(n => {
+            n.classList.remove('cat-dragging', 'cat-drag-over');
+        });
+    }
+
+    // Escape para cancelar arrastre
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') cleanupDragState();
+    });
+
+    // Red de seguridad global: limpiar si el touch se cancela fuera del elemento
+    document.addEventListener('touchcancel', cleanupDragState, { passive: true });
+    document.addEventListener('pointerup', cleanupDragState, { passive: true });
+
     function handleCatClick(event, cat) {
         if (Date.now() < suppressClickUntil) {
             event.preventDefault();
@@ -3036,6 +3067,7 @@ end $$;</div>
 
     // Drag & Drop HTML5 estándar (Escritorio / Ratón)
     function handleCatDragStart(e) {
+        cleanupDragState(); // Limpieza preventiva
         draggedCatName = e.currentTarget.dataset.cat;
         e.currentTarget.classList.add('cat-dragging');
         e.dataTransfer.effectAllowed = 'move';
@@ -3052,7 +3084,10 @@ end $$;</div>
     }
 
     function handleCatDragLeave(e) {
-        e.currentTarget.classList.remove('cat-drag-over');
+        // Solo limpiar si realmente salimos del elemento (no al entrar en hijos)
+        if (!e.currentTarget.contains(e.relatedTarget)) {
+            e.currentTarget.classList.remove('cat-drag-over');
+        }
     }
 
     function handleCatDrop(e) {
@@ -3061,20 +3096,26 @@ end $$;</div>
         const targetNode = e.currentTarget;
         targetNode.classList.remove('cat-drag-over');
         const targetCat = targetNode.dataset.cat;
-        if (draggedCatName && targetCat && draggedCatName !== targetCat) {
-            reorderCategories(draggedCatName, targetCat);
+        
+        // Guardar valores antes de limpiar
+        const fromCat = draggedCatName;
+        cleanupDragState();
+        
+        if (fromCat && targetCat && fromCat !== targetCat) {
+            reorderCategories(fromCat, targetCat);
         }
-        draggedCatName = null;
     }
 
     function handleCatDragEnd(e) {
-        e.currentTarget.classList.remove('cat-dragging');
-        document.querySelectorAll('.cat-node').forEach(n => n.classList.remove('cat-drag-over', 'cat-dragging'));
-        draggedCatName = null;
+        // dragEnd se dispara SIEMPRE al final (drop, cancel, escape)
+        cleanupDragState();
     }
 
     // Soporte Touch Móvil (Pulsación larga para levantar y mover estilo widget)
     function handleCatTouchStart(e) {
+        // Ignorar si ya hay un arrastre activo
+        if (touchDraggingCat || draggedCatName) return;
+        
         const node = e.currentTarget;
         const cat = node.dataset.cat;
         touchMoved = false;
@@ -3105,18 +3146,21 @@ end $$;</div>
             touchCloneEl.style.transform = 'scale(1.08)';
             touchCloneEl.style.boxShadow = '0 16px 36px rgba(0,0,0,0.6), 0 0 20px var(--cyan-glow)';
             touchCloneEl.style.borderColor = 'var(--cyan)';
+            touchCloneEl.style.transition = 'none'; // Sin animaciones durante el arrastre
             document.body.appendChild(touchCloneEl);
+            
+            // Prevenir scroll y selección de texto
+            document.body.style.overflow = 'hidden';
+            document.body.style.touchAction = 'none';
         }, 300);
     }
 
     function handleCatTouchMove(e) {
         if (!touchDraggingCat) {
-            // Si el usuario mueve el dedo antes de que se cumpla el long-press, cancelamos para permitir scroll normal
             clearTimeout(touchLongPressTimer);
             return;
         }
 
-        // Si ya está activo el arrastre táctil, bloqueamos el scroll
         e.preventDefault();
         touchMoved = true;
         const touch = e.touches[0];
@@ -3136,30 +3180,33 @@ end $$;</div>
     }
 
     function handleCatTouchEnd(e) {
-        clearTimeout(touchLongPressTimer);
-
-        if (touchCloneEl) {
-            touchCloneEl.remove();
-            touchCloneEl = null;
-        }
-
-        if (touchDraggingCat) {
-            e.preventDefault();
-            suppressClickUntil = Date.now() + 400; // Evitar abrir la categoría al soltar
-
+        const wasDragging = touchDraggingCat;
+        const targetCat = (() => {
+            if (!wasDragging) return null;
             const touch = e.changedTouches[0];
             const elUnder = document.elementFromPoint(touch.clientX, touch.clientY);
             const targetNode = elUnder ? elUnder.closest('.cat-node') : null;
+            return (targetNode && targetNode.dataset.cat && targetNode.dataset.cat !== wasDragging) 
+                ? targetNode.dataset.cat 
+                : null;
+        })();
 
-            if (targetNode && targetNode.dataset.cat && targetNode.dataset.cat !== touchDraggingCat) {
-                reorderCategories(touchDraggingCat, targetNode.dataset.cat);
-            }
+        // LIMPIEZA TOTAL ANTES DE REORDER
+        cleanupDragState();
+        document.body.style.overflow = '';
+        document.body.style.touchAction = '';
 
-            document.querySelectorAll('.cat-node').forEach(n => {
-                n.classList.remove('cat-dragging', 'cat-drag-over');
-            });
-            touchDraggingCat = null;
+        if (wasDragging && targetCat) {
+            suppressClickUntil = Date.now() + 400;
+            reorderCategories(wasDragging, targetCat);
         }
+    }
+
+    // Touch cancel (llamada entrante, alerta, etc.)
+    function handleCatTouchCancel(e) {
+        cleanupDragState();
+        document.body.style.overflow = '';
+        document.body.style.touchAction = '';
     }
 
     async function reorderCategories(fromCat, toCat) {
